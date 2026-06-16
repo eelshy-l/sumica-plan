@@ -182,7 +182,8 @@ body.unlocked .access-gate{display:none}
 .ev-popup-close{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;border:none;background:transparent;cursor:pointer;color:var(--text3);font-size:13px;font-family:inherit}
 .items-list-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
 .items-list-row:last-child{border-bottom:none}
-.chat-shell{height:calc(100vh - 132px);min-height:520px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
+.chat-shell{height:calc(100vh - 132px);min-height:520px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);display:grid;grid-template-columns:minmax(0,1fr) 320px;overflow:hidden}
+.chat-main{min-width:0;display:flex;flex-direction:column;overflow:hidden}
 .chat-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(180deg,#fff,#fbfaf8)}
 .chat-title{font-size:15px;font-weight:800;display:flex;align-items:center;gap:7px}
 .chat-meta{font-size:12px;color:var(--text3);font-weight:600}
@@ -200,8 +201,10 @@ body.unlocked .access-gate{display:none}
 .chat-text{font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
 .chat-del{border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:12px;padding:2px}
 .chat-del:hover{color:var(--red)}
-.chat-form{border-top:1px solid var(--border);padding:12px;background:#fff;display:grid;grid-template-columns:150px 1fr auto;gap:8px;align-items:end}
-.chat-form textarea{min-height:42px;max-height:120px;resize:vertical}
+.chat-form{border-left:1px solid var(--border);padding:16px;background:#fff;display:flex;flex-direction:column;gap:10px}
+.chat-form-title{font-size:14px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:7px;margin-bottom:2px}
+.chat-form-sub{font-size:12px;color:var(--text3);line-height:1.45;margin-bottom:4px}
+.chat-form textarea{min-height:180px;max-height:360px;resize:vertical}
 .sub-form{display:none;background:var(--surface2);border-radius:8px;padding:14px;margin-bottom:12px;border:1px solid var(--border)}
 .sub-form-title{font-size:13px;font-weight:700;margin-bottom:10px}
 .tag-done{font-size:11px;padding:2px 8px;border-radius:10px;cursor:pointer;font-weight:700;background:#d1fae5;color:#065f46}
@@ -283,11 +286,14 @@ body.unlocked .access-gate{display:none}
   .upload-area{padding:16px 12px}
   .toast{bottom:14px;max-width:calc(100vw - 24px);padding:10px 16px;font-size:13px;text-align:center}
   .ev-popup{left:12px!important;right:12px;max-width:none;min-width:0;width:auto}
-  .chat-shell{height:calc(100vh - 124px);min-height:460px;border-radius:8px}
+  .chat-shell{height:calc(100vh - 124px);min-height:460px;border-radius:8px;display:flex;flex-direction:column}
+  .chat-main{min-height:0;flex:1}
   .chat-head{padding:12px}
   .chat-list{padding:12px}
   .chat-bubble{max-width:86%;padding:8px 10px}
-  .chat-form{grid-template-columns:1fr;gap:7px;padding:10px}
+  .chat-form{border-left:none;border-top:1px solid var(--border);gap:7px;padding:10px}
+  .chat-form-title,.chat-form-sub{display:none}
+  .chat-form textarea{min-height:72px;max-height:140px}
 }
 @media(max-width:420px){
   .sync-badge{max-width:38vw}
@@ -450,8 +456,8 @@ var FIREBASE_CONFIG={
 var FIREBASE_COLLECTION='sumigaData';
 var FIREBASE_DOC='main';
 var FIREBASE_DB=null,FIREBASE_AUTH=null,FIREBASE_READY=null,FIREBASE_AUTH_READY=null,currentUser=null,appStarted=false,CHAT_UNSUB=null;
-var LEGACY_EXTRACT_API=''; // 문서 인식 서버가 필요하면 별도 Apps Script/서버 URL을 여기에 넣으세요.
-var ACCESS_CODE_HASH='0bc4bef70d574128f80f90375554f220e68a6ec2cf3fc01dc82a33225b728efe'; // 현재 입장 코드: sumica2026
+var LEGACY_EXTRACT_API='/.netlify/functions/extract-contract'; // Netlify Functions 계약서 인식 서버
+var ACCESS_CODE_HASH='b9ef9176f8e4ea146bf0b3ee9258b274a67dd21a3cea7d22b9de41841f0c3eed'; // 현재 입장 코드: 0607
 
 function hasFirebaseConfig(){
   return !!(FIREBASE_CONFIG&&FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.projectId&&FIREBASE_CONFIG.appId);
@@ -574,7 +580,7 @@ function sheetExtract(fileName,mediaType,base64,isDesign){
   return fetch(LEGACY_EXTRACT_API+'?action=extract',{
     method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
     body:JSON.stringify({fileName:fileName,mediaType:mediaType,data:base64,type:isDesign?'design':'construction'})
-  }).then(function(r){if(!r.ok)throw new Error('extract failed: '+r.status);return r.json();})
+  }).then(function(r){return r.json().catch(function(){return {};}).then(function(j){if(!r.ok)throw new Error(j.error||('extract failed: '+r.status));return j;});})
   .then(function(j){if(!j||j.ok===false||!j.data)throw new Error((j&&j.error)||'extract failed');return j.data;});
 }
 function setSyncStatus(state,text){
@@ -820,6 +826,9 @@ function avKey(p){return p==='이선주'?'선':p?p[0]:'';}
 function statusBadge(s){var m={'완료':'s-완료','진행 중':'s-진행중','예정':'s-예정'};return s&&m[s]?'<span class="'+m[s]+'">'+s+'</span>':'';}
 function fmtM(n){if(!n)return '—';return (n/10000).toLocaleString()+'만원';}
 function fmtFull(n){if(!n)return '—';return n.toLocaleString()+'원';}
+function moneyValue(v){return parseInt(String(v||'').replace(/[^\d-]/g,''),10)||0;}
+function moneyText(v){var n=moneyValue(v);return n?n.toLocaleString():'';}
+function moneyInput(el){el.value=moneyText(el.value);}
 function shortSite(s){if(!s)return '—';return s.replace('경상북도 ','').replace('서울시 ','').replace('대구시 ','').replace('부산시 ','').replace('경산시 ','').replace(' 개령면','').replace(' 동래구','').replace(' 성동구','').replace(' 수성구','').replace(' 북구','').replace(' 동구','');}
 function progColor(stage){return {'인테리어':'fill-green','착공':'fill-green','골조':'fill-blue','인허가':'fill-amber'}[stage]||'fill-purple';}
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2200);}
@@ -940,7 +949,7 @@ function openSiteModal(siteId){
     h+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--text3)">기준 면적</span><span>'+(df.py?df.py+'평':'—')+'</span></div>';
     h+='<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--text3)">총 설계비 (부가세 포함)</span><span>'+fmtFull(df.totalFee)+'</span></div>';
     h+='<div style="display:flex;justify-content:space-between;font-weight:700"><span style="color:var(--text3)">납부 완료</span><span style="color:var(--accent)">'+fmtFull(pt)+'</span></div></div>';
-    h+='<table class="pay-table"><thead><tr><th>항목</th><th>금액</th><th>부가세</th><th>납부예정일</th><th>비고</th><th>상태</th><th></th></tr></thead><tbody>';
+    h+='<table class="pay-table"><thead><tr><th>항목</th><th>금액</th><th>부가세</th><th>납부일</th><th>비고</th><th>상태</th><th></th></tr></thead><tbody>';
     dfItems.forEach(function(it){
       var ii=df.items.indexOf(it);
       h+='<tr style="cursor:pointer" onclick="_btnDesignFee()">';
@@ -1193,15 +1202,15 @@ function openDesignFeeModal(id){
     '<div class="form-group"><label class="form-label">만료일</label><input class="form-input" id="df-enddate" placeholder="YYYY/MM/DD" value="'+(df.endDate||'')+'"></div></div>'+
     '<div class="form-row">'+
     '<div class="form-group"><label class="form-label">기준 면적 (평)</label><input class="form-input" id="df-py" type="number" value="'+(df.py||'')+'"></div>'+
-    '<div class="form-group"><label class="form-label">총 설계비 (부가세 포함, 원)</label><input class="form-input" id="df-total" type="number" value="'+(df.totalFee||'')+'"></div></div>'+
+    '<div class="form-group"><label class="form-label">총 설계비 (부가세 포함, 원)</label><input class="form-input" id="df-total" inputmode="numeric" value="'+moneyText(df.totalFee)+'" oninput="moneyInput(this)"></div></div>'+
     '<div class="section-sep">납부 항목 <button onclick="dfShowAdd()" class="subbtn">+ 추가</button></div>'+
     '<div id="df-items-list" style="margin-bottom:10px"></div>'+
     '<div id="df-add-form" class="sub-form">'+
     '<div class="sub-form-title" id="df-add-title">항목 추가</div>'+
     '<div class="form-row"><div class="form-group"><label class="form-label">항목명 *</label><input class="form-input" id="dfn-label" placeholder="예) 계약금"></div>'+
-    '<div class="form-group"><label class="form-label">납부예정일</label><input class="form-input" id="dfn-due" placeholder="예) 2025/02/26"></div></div>'+
-    '<div class="form-row"><div class="form-group"><label class="form-label">금액 (원)</label><input class="form-input" id="dfn-amount" type="number"></div>'+
-    '<div class="form-group"><label class="form-label">부가세 (원)</label><input class="form-input" id="dfn-vat" type="number" value="0"></div></div>'+
+    '<div class="form-group"><label class="form-label">납부일</label><input class="form-input" id="dfn-due" placeholder="예) 2025/02/26"></div></div>'+
+    '<div class="form-row"><div class="form-group"><label class="form-label">금액 (원)</label><input class="form-input" id="dfn-amount" inputmode="numeric" oninput="moneyInput(this)"></div>'+
+    '<div class="form-group"><label class="form-label">부가세 (원)</label><input class="form-input" id="dfn-vat" inputmode="numeric" value="0" oninput="moneyInput(this)"></div></div>'+
     '<div class="form-group"><label class="form-label">비고</label><input class="form-input" id="dfn-note"></div>'+
     '<div style="display:flex;gap:8px"><button class="btn-primary" id="dfn-save" onclick="dfSaveItem()">추가</button>'+
     '<button class="btn-secondary" onclick="document.getElementById(\'df-add-form\').style.display=\'none\'">취소</button></div></div>'+
@@ -1227,8 +1236,8 @@ function openDesignFeeModal(id){
     document.getElementById('df-add-title').textContent='항목 수정';
     document.getElementById('dfn-label').value=it.label||'';
     document.getElementById('dfn-due').value=it.dueDate||'';
-    document.getElementById('dfn-amount').value=it.amount||0;
-    document.getElementById('dfn-vat').value=it.vat||0;
+    document.getElementById('dfn-amount').value=moneyText(it.amount);
+    document.getElementById('dfn-vat').value=moneyText(it.vat)||'0';
     document.getElementById('dfn-note').value=it.note||'';
     document.getElementById('dfn-save').textContent='수정';
   };
@@ -1250,7 +1259,7 @@ function openDesignFeeModal(id){
     var label=document.getElementById('dfn-label').value.trim();
     if(!label){showToast('항목명을 입력해주세요');return;}
     if(!df.items)df.items=[];
-    var item={label:label,dueDate:document.getElementById('dfn-due').value,amount:parseInt(document.getElementById('dfn-amount').value)||0,vat:parseInt(document.getElementById('dfn-vat').value)||0,note:document.getElementById('dfn-note').value,done:false};
+    var item={label:label,dueDate:document.getElementById('dfn-due').value,amount:moneyValue(document.getElementById('dfn-amount').value),vat:moneyValue(document.getElementById('dfn-vat').value),note:document.getElementById('dfn-note').value,done:false};
     if(editIdx>=0){item.done=df.items[editIdx].done;df.items[editIdx]=item;editIdx=-1;}
     else df.items.push(item);
     renderItems();
@@ -1264,7 +1273,7 @@ function openDesignFeeModal(id){
       if(d.contractDate&&document.getElementById('df-date'))document.getElementById('df-date').value=d.contractDate;
       if(d.endDate&&document.getElementById('df-enddate'))document.getElementById('df-enddate').value=d.endDate;
       if(d.py&&document.getElementById('df-py'))document.getElementById('df-py').value=d.py;
-      if(d.totalFee&&document.getElementById('df-total'))document.getElementById('df-total').value=d.totalFee;
+      if(d.totalFee&&document.getElementById('df-total'))document.getElementById('df-total').value=moneyText(d.totalFee);
       if(d.items&&d.items.length){df.items=(df.items||[]).concat(d.items);renderItems();showToast(d.items.length+'개 항목 추가됐어요');}
       else showToast('기본 정보가 입력됐어요');
     }catch(e){showToast('파싱 오류');}
@@ -1273,7 +1282,7 @@ function openDesignFeeModal(id){
     df.contractDate=document.getElementById('df-date').value;
     df.endDate=document.getElementById('df-enddate')?document.getElementById('df-enddate').value:'';
     df.py=parseInt(document.getElementById('df-py').value)||0;
-    df.totalFee=parseInt(document.getElementById('df-total').value)||0;
+    df.totalFee=moneyValue(document.getElementById('df-total').value);
     var ss=sites.find(function(x){return x.id===sid;});
     if(!ss)return;
     ss.designFee=df;
@@ -1499,8 +1508,9 @@ function processFile(file,statusId,dataId,isDesign,callback){
       if(document.getElementById(dataId))document.getElementById(dataId).value=JSON.stringify(parsed);
       if(statusEl)statusEl.innerHTML='<div class="upload-status success"><i class="ti ti-check"></i> 인식 완료! 자동 적용됐어요</div>';
       if(callback)setTimeout(function(){callback();},100);
-    }).catch(function(){
-      if(statusEl)statusEl.innerHTML='<div class="upload-status error"><i class="ti ti-alert-circle"></i> 서버 인식 기능이 아직 준비되지 않았어요 — 직접 입력해주세요</div>';
+    }).catch(function(err){
+      var msg=(err&&err.message)?err.message:'서버 인식 기능이 아직 준비되지 않았어요';
+      if(statusEl)statusEl.innerHTML='<div class="upload-status error"><i class="ti ti-alert-circle"></i> '+esc(msg)+' — 직접 입력해주세요</div>';
     });
   };
   reader.readAsDataURL(file);
@@ -1890,7 +1900,7 @@ function renderChat(){
     return (Date.parse(a.createdAt||0)||0)-(Date.parse(b.createdAt||0)||0);
   });
   var person=localStorage.getItem('smg_chat_person')||PERSONS[0];
-  var h='<div class="chat-shell">';
+  var h='<div class="chat-shell"><div class="chat-main">';
   h+='<div class="chat-head"><div class="chat-title"><i class="ti ti-message-circle"></i> 팀 채팅</div><div class="chat-meta">'+rows.length+'개 메시지</div></div>';
   h+='<div class="chat-list" id="chat-list">';
   if(!rows.length){
@@ -1908,8 +1918,10 @@ function renderChat(){
       h+='<div class="chat-text">'+esc(m.text||'')+'</div></div></div>';
     });
   }
-  h+='</div>';
+  h+='</div></div>';
   h+='<div class="chat-form">';
+  h+='<div class="chat-form-title"><i class="ti ti-edit"></i> 메시지 작성</div>';
+  h+='<div class="chat-form-sub">업무 공유나 현장 메모를 남기면 다른 기기에서도 같이 확인됩니다.</div>';
   h+='<select class="form-input" id="chat-person" onchange="localStorage.setItem(\'smg_chat_person\',this.value);renderChat()">'+PERSONS.map(function(p){return '<option value="'+p+'" '+(person===p?'selected':'')+'>'+p+'</option>';}).join('')+'</select>';
   h+='<textarea class="form-input" id="chat-input" placeholder="메시지를 입력하세요" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"></textarea>';
   h+='<button class="btn-primary" onclick="sendChatMessage()"><i class="ti ti-send"></i> 보내기</button>';
