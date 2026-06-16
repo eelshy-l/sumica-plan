@@ -182,7 +182,7 @@ body.unlocked .access-gate{display:none}
 .ev-popup-close{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;border:none;background:transparent;cursor:pointer;color:var(--text3);font-size:13px;font-family:inherit}
 .items-list-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
 .items-list-row:last-child{border-bottom:none}
-.chat-shell{height:calc(100vh - 132px);min-height:520px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);display:grid;grid-template-columns:minmax(0,1fr) 320px;overflow:hidden}
+.chat-shell{height:calc(100dvh - 132px);min-height:0;max-height:720px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);display:grid;grid-template-columns:minmax(0,1fr) 280px;overflow:hidden}
 .chat-main{min-width:0;display:flex;flex-direction:column;overflow:hidden}
 .chat-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(180deg,#fff,#fbfaf8)}
 .chat-title{font-size:15px;font-weight:800;display:flex;align-items:center;gap:7px}
@@ -201,10 +201,11 @@ body.unlocked .access-gate{display:none}
 .chat-text{font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
 .chat-del{border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:12px;padding:2px}
 .chat-del:hover{color:var(--red)}
-.chat-form{border-left:1px solid var(--border);padding:16px;background:#fff;display:flex;flex-direction:column;gap:10px}
+.chat-form{border-left:1px solid var(--border);padding:14px;background:#fff;display:flex;flex-direction:column;gap:9px}
 .chat-form-title{font-size:14px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:7px;margin-bottom:2px}
 .chat-form-sub{font-size:12px;color:var(--text3);line-height:1.45;margin-bottom:4px}
-.chat-form textarea{min-height:180px;max-height:360px;resize:vertical}
+.chat-form textarea{min-height:118px;max-height:210px;resize:vertical}
+.chat-tab-dot{display:inline-flex;width:7px;height:7px;border-radius:50%;background:var(--red);margin-left:2px;box-shadow:0 0 0 3px rgba(192,57,43,.12)}
 .sub-form{display:none;background:var(--surface2);border-radius:8px;padding:14px;margin-bottom:12px;border:1px solid var(--border)}
 .sub-form-title{font-size:13px;font-weight:700;margin-bottom:10px}
 .tag-done{font-size:11px;padding:2px 8px;border-radius:10px;cursor:pointer;font-weight:700;background:#d1fae5;color:#065f46}
@@ -286,14 +287,14 @@ body.unlocked .access-gate{display:none}
   .upload-area{padding:16px 12px}
   .toast{bottom:14px;max-width:calc(100vw - 24px);padding:10px 16px;font-size:13px;text-align:center}
   .ev-popup{left:12px!important;right:12px;max-width:none;min-width:0;width:auto}
-  .chat-shell{height:calc(100vh - 124px);min-height:460px;border-radius:8px;display:flex;flex-direction:column}
+  .chat-shell{height:calc(100dvh - 124px);min-height:0;max-height:none;border-radius:8px;display:flex;flex-direction:column}
   .chat-main{min-height:0;flex:1}
   .chat-head{padding:12px}
   .chat-list{padding:12px}
   .chat-bubble{max-width:86%;padding:8px 10px}
   .chat-form{border-left:none;border-top:1px solid var(--border);gap:7px;padding:10px}
   .chat-form-title,.chat-form-sub{display:none}
-  .chat-form textarea{min-height:72px;max-height:140px}
+  .chat-form textarea{min-height:58px;max-height:110px}
 }
 @media(max-width:420px){
   .sync-badge{max-width:38vw}
@@ -390,12 +391,12 @@ body{background:linear-gradient(180deg,#f7faf8 0,#f2f5f3 360px,#f5f7f6 100%);col
     <div><div class="logo-text">수미가 설계부</div><div class="logo-sub">프로젝트 관리 대시보드</div></div>
   </div>
   <nav class="tabs-nav">
-    <button class="tab-btn active" onclick="showTab('sites',this)"><i class="ti ti-building"></i> 현장</button>
-    <button class="tab-btn" onclick="showTab('timeline',this)"><i class="ti ti-chart-gantt"></i> 타임라인</button>
-    <button class="tab-btn" onclick="showTab('calendar',this)"><i class="ti ti-calendar"></i> 이벤트</button>
-    <button class="tab-btn" onclick="showTab('report',this)"><i class="ti ti-clipboard-check"></i> 업무 보고</button>
-    <button class="tab-btn" onclick="showTab('plan',this)"><i class="ti ti-checklist"></i> 업무 계획</button>
-    <button class="tab-btn" onclick="showTab('chat',this)"><i class="ti ti-message-circle"></i> 채팅</button>
+    <button class="tab-btn active" data-tab="sites" onclick="showTab('sites',this)"><i class="ti ti-building"></i> 현장</button>
+    <button class="tab-btn" data-tab="timeline" onclick="showTab('timeline',this)"><i class="ti ti-chart-gantt"></i> 타임라인</button>
+    <button class="tab-btn" data-tab="calendar" onclick="showTab('calendar',this)"><i class="ti ti-calendar"></i> 이벤트</button>
+    <button class="tab-btn" data-tab="report" onclick="showTab('report',this)"><i class="ti ti-clipboard-check"></i> 업무 보고</button>
+    <button class="tab-btn" data-tab="plan" onclick="showTab('plan',this)"><i class="ti ti-checklist"></i> 업무 계획</button>
+    <button class="tab-btn" data-tab="chat" onclick="showTab('chat',this)"><i class="ti ti-message-circle"></i> 채팅</button>
   </nav>
 </header>
 <main class="main">
@@ -642,6 +643,7 @@ var _todayInit=new Date();
 var calYear=_todayInit.getFullYear(),calMonth=_todayInit.getMonth()+1;
 var reportFilter='',planFilter='';
 var openWeeks={};
+var baseTitle=document.title,chatUnread=false,CHAT_LAST_SEEN_KEY='smg_chat_seen_at';
 
 // ── API ────────────────────────────────────────────────
 function getLocalData(key,fallback){
@@ -734,6 +736,7 @@ function initData(){
   chatMessages=getLocalData('chat',[]);
   checkState=getLocalData('checks',{});
   renderAll();
+  updateChatNotice();
 
   if(!hasFirebaseConfig()){
     setSyncStatus('err','Firebase 설정 필요 · 로컬 모드');
@@ -767,6 +770,7 @@ function initData(){
     applyRemote('checks',res[5]);
     setSyncStatus('ok','Firebase 동기화됨 ✓');
     renderAll();
+    updateChatNotice();
     startChatListener();
   }).catch(function(err){console.warn(err);setSyncStatus('err','로컬 모드 · Firebase 연결 실패');});
 }
@@ -1893,6 +1897,32 @@ function chatTimeLabel(iso){
   if(isNaN(d.getTime()))d=new Date();
   return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 }
+function latestChatTime(){
+  return activeList(chatMessages).reduce(function(max,m){
+    var t=Date.parse(m.updatedAt||m.createdAt||0)||0;
+    return Math.max(max,t);
+  },0);
+}
+function updateChatNotice(){
+  var latest=latestChatTime();
+  var seen=parseInt(localStorage.getItem(CHAT_LAST_SEEN_KEY)||'0',10)||0;
+  chatUnread=latest>seen;
+  document.title=chatUnread?'● '+baseTitle:baseTitle;
+  document.querySelectorAll('.tab-btn').forEach(function(btn){
+    if(btn.getAttribute('data-tab')!=='chat')return;
+    var dot=btn.querySelector('.chat-tab-dot');
+    if(chatUnread&&!dot){
+      btn.insertAdjacentHTML('beforeend','<span class="chat-tab-dot" title="새 메시지"></span>');
+    }else if(!chatUnread&&dot){
+      dot.remove();
+    }
+  });
+}
+function markChatRead(){
+  localStorage.setItem(CHAT_LAST_SEEN_KEY,String(Math.max(Date.now(),latestChatTime())));
+  chatUnread=false;
+  updateChatNotice();
+}
 function renderChat(){
   var root=document.getElementById('chat-root');
   if(!root)return;
@@ -1928,6 +1958,7 @@ function renderChat(){
   h+='</div></div>';
   root.innerHTML=h;
   setTimeout(function(){var list=document.getElementById('chat-list');if(list)list.scrollTop=list.scrollHeight;},0);
+  markChatRead();
 }
 function sendChatMessage(){
   var input=document.getElementById('chat-input');
@@ -1954,7 +1985,9 @@ function startChatListener(){
       var data=doc.exists?(doc.data()||{}).data:null;
       if(!data||isRecentlySaved('chat'))return;
       applyRemote('chat',data);
-      if(document.getElementById('tab-chat').classList.contains('active'))renderChat();
+      var chatOpen=document.getElementById('tab-chat').classList.contains('active');
+      if(chatOpen)renderChat();
+      else{updateChatNotice();showToast('새 채팅이 도착했어요');}
     });
   }catch(e){console.warn('chat listener failed',e);}
 }
