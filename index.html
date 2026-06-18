@@ -44,6 +44,7 @@ body.unlocked .access-gate{display:none}
 .stat-label{font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 .stat-val{font-size:34px;font-weight:800;letter-spacing:-1.5px}
 .panel{display:none}.panel.active{display:block}
+body.chat-mode .stats-row{display:none}
 .site-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .site-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .2s;position:relative;box-shadow:var(--shadow)}
 .site-card:hover{border-color:var(--border2);box-shadow:var(--shadow-md);transform:translateY(-1px)}
@@ -199,13 +200,30 @@ body.unlocked .access-gate{display:none}
 .chat-info{display:flex;align-items:center;gap:7px;margin-bottom:3px;font-size:11px;color:var(--text3);font-weight:700}
 .chat-msg.me .chat-info{justify-content:flex-end}
 .chat-text{font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.chat-image{display:block;width:min(360px,100%);max-height:300px;object-fit:cover;border-radius:7px;margin-top:7px;cursor:pointer;background:var(--surface2)}
+.chat-actions{display:flex;align-items:center;gap:6px;margin-top:7px;min-height:24px}
+.chat-react{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+.chat-react.on{color:#c0392b;border-color:#efb7b1;background:var(--red-light)}
+.chat-read{margin-left:auto;font-size:10px;color:var(--text3);font-weight:700;white-space:nowrap}
 .chat-del{border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:12px;padding:2px}
 .chat-del:hover{color:var(--red)}
 .chat-form{border-left:1px solid var(--border);padding:14px;background:#fff;display:flex;flex-direction:column;gap:9px}
 .chat-form-title{font-size:14px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:7px;margin-bottom:2px}
 .chat-form-sub{font-size:12px;color:var(--text3);line-height:1.45;margin-bottom:4px}
 .chat-form textarea{min-height:118px;max-height:210px;resize:vertical}
+.chat-compose-actions{display:flex;align-items:center;gap:7px}
+.chat-attach{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:58px;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text2);cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;flex:0 0 auto}
+.chat-attach:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.chat-send{flex:1;justify-content:center}
+.chat-image-preview{position:relative;border:1px solid var(--border);border-radius:8px;padding:7px;background:var(--surface2)}
+.chat-image-preview img{display:block;width:100%;height:86px;object-fit:cover;border-radius:5px}
+.chat-image-remove{position:absolute;top:11px;right:11px;width:26px;height:26px;border:none;border-radius:50%;background:rgba(20,20,20,.72);color:#fff;cursor:pointer}
+.chat-upload-note{font-size:11px;color:var(--text3);line-height:1.4}
 .chat-tab-dot{display:inline-flex;width:7px;height:7px;border-radius:50%;background:var(--red);margin-left:2px;box-shadow:0 0 0 3px rgba(192,57,43,.12)}
+.chat-lightbox{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.86);align-items:center;justify-content:center;padding:24px}
+.chat-lightbox.open{display:flex}
+.chat-lightbox img{max-width:96vw;max-height:92vh;object-fit:contain;border-radius:6px}
+.chat-lightbox button{position:absolute;top:18px;right:18px;width:38px;height:38px;border:none;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;font-size:22px;cursor:pointer}
 .sub-form{display:none;background:var(--surface2);border-radius:8px;padding:14px;margin-bottom:12px;border:1px solid var(--border)}
 .sub-form-title{font-size:13px;font-weight:700;margin-bottom:10px}
 .tag-done{font-size:11px;padding:2px 8px;border-radius:10px;cursor:pointer;font-weight:700;background:#d1fae5;color:#065f46}
@@ -292,6 +310,7 @@ body.unlocked .access-gate{display:none}
   .chat-head{padding:12px}
   .chat-list{padding:12px}
   .chat-bubble{max-width:86%;padding:8px 10px}
+  .chat-image{max-height:230px}
   .chat-form{border-left:none;border-top:1px solid var(--border);gap:7px;padding:10px}
   .chat-form-title,.chat-form-sub{display:none}
   .chat-form textarea{min-height:58px;max-height:110px}
@@ -438,6 +457,10 @@ body{background:linear-gradient(180deg,#f7faf8 0,#f2f5f3 360px,#f5f7f6 100%);col
     <div class="modal-body" id="form-body"></div>
   </div>
 </div>
+<div class="chat-lightbox" id="chat-lightbox" onclick="if(event.target===this)closeChatImage()">
+  <button type="button" onclick="closeChatImage()" title="닫기"><i class="ti ti-x"></i></button>
+  <img id="chat-lightbox-img" alt="채팅 첨부 이미지">
+</div>
 <div class="toast" id="toast"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
@@ -456,7 +479,7 @@ var FIREBASE_CONFIG={
 };
 var FIREBASE_COLLECTION='sumigaData';
 var FIREBASE_DOC='main';
-var FIREBASE_DB=null,FIREBASE_AUTH=null,FIREBASE_READY=null,FIREBASE_AUTH_READY=null,currentUser=null,appStarted=false,CHAT_UNSUB=null;
+var FIREBASE_DB=null,FIREBASE_AUTH=null,FIREBASE_READY=null,FIREBASE_AUTH_READY=null,currentUser=null,appStarted=false,CHAT_UNSUB=[],CHAT_LEGACY_UNSUB=null;
 var LEGACY_EXTRACT_API='/.netlify/functions/extract-contract'; // Netlify Functions 계약서 인식 서버
 var ACCESS_CODE_HASH='b9ef9176f8e4ea146bf0b3ee9258b274a67dd21a3cea7d22b9de41841f0c3eed'; // 현재 입장 코드: 0607
 
@@ -644,6 +667,7 @@ var calYear=_todayInit.getFullYear(),calMonth=_todayInit.getMonth()+1;
 var reportFilter='',planFilter='';
 var openWeeks={};
 var baseTitle=document.title,chatUnread=false,CHAT_LAST_SEEN_KEY='smg_chat_seen_at';
+var pendingChatImage=null,pendingChatDraft='',chatReadSaving={},CHAT_IMAGE_MAX_CHARS=720000;
 
 // ── API ────────────────────────────────────────────────
 function getLocalData(key,fallback){
@@ -1899,7 +1923,7 @@ function chatTimeLabel(iso){
 }
 function latestChatTime(){
   return activeList(chatMessages).reduce(function(max,m){
-    var t=Date.parse(m.updatedAt||m.createdAt||0)||0;
+    var t=Date.parse(m.createdAt||0)||0;
     return Math.max(max,t);
   },0);
 }
@@ -1918,14 +1942,78 @@ function updateChatNotice(){
     }
   });
 }
-function markChatRead(){
+function markChatTabRead(){
   localStorage.setItem(CHAT_LAST_SEEN_KEY,String(Math.max(Date.now(),latestChatTime())));
   chatUnread=false;
   updateChatNotice();
 }
-function renderChat(){
+function chatMessageDoc(id){return remoteDoc('chatmsg_'+id);}
+function cacheChatMessages(){
+  var light=chatMessages.map(function(message){
+    if(!message||!message.imageData)return message;
+    var copy=Object.assign({},message,{hasImage:true});delete copy.imageData;return copy;
+  });
+  setLocalData('chat',light);
+}
+function mergeOneChatMessage(message){
+  if(!message||!message.id)return;
+  chatMessages=mergeById(chatMessages,[message]);
+  cacheChatMessages();
+}
+function writeChatMessage(message){
+  mergeOneChatMessage(message);
+  if(!currentUser)return Promise.resolve(false);
+  return chatMessageDoc(message.id).set({
+    type:'chatMessage',
+    message:message,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  },{merge:true}).then(function(){return true;}).catch(function(err){console.warn('chat save failed',err);return false;});
+}
+function mutateChatMessage(id,mutator){
+  var local=chatMessages.find(function(m){return m.id===id;});
+  if(!local)return Promise.resolve(null);
+  var optimistic=mutator(JSON.parse(JSON.stringify(local)));
+  optimistic.updatedAt=new Date().toISOString();
+  mergeOneChatMessage(optimistic);
+  if(!currentUser)return Promise.resolve(optimistic);
+  var ref=chatMessageDoc(id);
+  return FIREBASE_DB.runTransaction(function(tx){
+    return tx.get(ref).then(function(snap){
+      var remote=snap.exists?(snap.data()||{}).message:null;
+      var base=remote&&remote.id?remote:local;
+      var next=mutator(JSON.parse(JSON.stringify(base)));
+      next.updatedAt=new Date().toISOString();
+      tx.set(ref,{type:'chatMessage',message:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+      return next;
+    });
+  }).then(function(next){mergeOneChatMessage(next);return next;}).catch(function(err){console.warn('chat update failed',err);return optimistic;});
+}
+function chatReadLabel(message,person){
+  if(message.person!==person)return '';
+  var readers=(Array.isArray(message.readBy)?message.readBy:[]).filter(function(p){return p&&p!==message.person;});
+  if(!readers.length)return '전송됨';
+  return readers.length===1?'읽음 '+readers[0]:'읽음 '+readers.length+'명';
+}
+function markChatMessagesRead(person){
+  var targets=activeList(chatMessages).filter(function(m){
+    return m.person!==person&&!(Array.isArray(m.readBy)&&m.readBy.indexOf(person)>=0)&&!chatReadSaving[m.id];
+  }).slice(-50);
+  if(!targets.length)return;
+  targets.forEach(function(m){
+    chatReadSaving[m.id]=true;
+    mutateChatMessage(m.id,function(base){
+      var list=Array.isArray(base.readBy)?base.readBy.slice():[];
+      if(list.indexOf(person)<0)list.push(person);
+      base.readBy=list;
+      return base;
+    }).then(function(){delete chatReadSaving[m.id];});
+  });
+}
+function renderChat(keepScroll){
   var root=document.getElementById('chat-root');
   if(!root)return;
+  var oldList=document.getElementById('chat-list');
+  var oldScroll=oldList?oldList.scrollTop:null;
   var rows=activeList(chatMessages).slice().sort(function(a,b){
     return (Date.parse(a.createdAt||0)||0)-(Date.parse(b.createdAt||0)||0);
   });
@@ -1941,11 +2029,16 @@ function renderChat(){
       var day=chatDayLabel(m.createdAt);
       if(day!==lastDay){h+='<div class="chat-day">'+day+'</div>';lastDay=day;}
       var mine=(m.person===person);
+      var likedBy=Array.isArray(m.likedBy)?m.likedBy:[];
+      var liked=likedBy.indexOf(person)>=0;
       h+='<div class="chat-msg '+(mine?'me':'')+'">';
       h+='<div class="chat-avatar '+avCls(m.person)+'">'+esc(avKey(m.person)||'?')+'</div>';
       h+='<div class="chat-bubble">';
       h+='<div class="chat-info"><span>'+esc(m.person||'작성자')+'</span><span>'+chatTimeLabel(m.createdAt)+'</span><button class="chat-del" title="삭제" onclick="deleteChatMessage(\''+m.id+'\')"><i class="ti ti-trash"></i></button></div>';
-      h+='<div class="chat-text">'+esc(m.text||'')+'</div></div></div>';
+      if(m.text)h+='<div class="chat-text">'+esc(m.text)+'</div>';
+      if(m.imageData)h+='<img class="chat-image" src="'+esc(m.imageData)+'" alt="'+esc(m.imageName||'첨부 이미지')+'" onclick="openChatImage(\''+m.id+'\')">';
+      h+='<div class="chat-actions"><button class="chat-react '+(liked?'on':'')+'" onclick="toggleChatLike(\''+m.id+'\')" title="'+esc(likedBy.join(', ')||'좋아요')+'"><i class="ti ti-heart'+(liked?'-filled':'')+'"></i> '+(likedBy.length||'좋아요')+'</button>';
+      h+='<span class="chat-read">'+esc(chatReadLabel(m,person))+'</span></div></div></div>';
     });
   }
   h+='</div></div>';
@@ -1953,45 +2046,106 @@ function renderChat(){
   h+='<div class="chat-form-title"><i class="ti ti-edit"></i> 메시지 작성</div>';
   h+='<div class="chat-form-sub">업무 공유나 현장 메모를 남기면 다른 기기에서도 같이 확인됩니다.</div>';
   h+='<select class="form-input" id="chat-person" onchange="localStorage.setItem(\'smg_chat_person\',this.value);renderChat()">'+PERSONS.map(function(p){return '<option value="'+p+'" '+(person===p?'selected':'')+'>'+p+'</option>';}).join('')+'</select>';
-  h+='<textarea class="form-input" id="chat-input" placeholder="메시지를 입력하세요" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"></textarea>';
-  h+='<button class="btn-primary" onclick="sendChatMessage()"><i class="ti ti-send"></i> 보내기</button>';
+  h+='<textarea class="form-input" id="chat-input" placeholder="메시지를 입력하세요" oninput="pendingChatDraft=this.value" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage()}">'+esc(pendingChatDraft)+'</textarea>';
+  h+='<div class="chat-image-preview" id="chat-image-preview" style="display:'+(pendingChatImage?'block':'none')+'">'+(pendingChatImage?'<img src="'+esc(pendingChatImage.dataUrl)+'" alt="첨부 미리보기"><button class="chat-image-remove" type="button" onclick="removeChatImage()" title="이미지 제거"><i class="ti ti-x"></i></button>':'')+'</div>';
+  h+='<div class="chat-compose-actions"><input type="file" id="chat-image-input" accept="image/*" style="display:none" onchange="prepareChatImage(this)"><button class="chat-attach" type="button" onclick="document.getElementById(\'chat-image-input\').click()" title="이미지 첨부"><i class="ti ti-paperclip"></i> 사진</button><button class="btn-primary chat-send" id="chat-send-btn" onclick="sendChatMessage()"><i class="ti ti-send"></i> 보내기</button></div>';
+  h+='<div class="chat-upload-note">사진은 전송 전에 자동으로 크기를 줄여 저장합니다.</div>';
   h+='</div></div>';
   root.innerHTML=h;
-  setTimeout(function(){var list=document.getElementById('chat-list');if(list)list.scrollTop=list.scrollHeight;},0);
-  markChatRead();
+  setTimeout(function(){var list=document.getElementById('chat-list');if(list)list.scrollTop=keepScroll&&oldScroll!==null?oldScroll:list.scrollHeight;},0);
+  markChatTabRead();
+  markChatMessagesRead(person);
+}
+function prepareChatImage(input){
+  var file=input&&input.files?input.files[0]:null;
+  if(!file)return;
+  if(!/^image\//.test(file.type)){showToast('이미지 파일만 첨부할 수 있어요');input.value='';return;}
+  if(file.size>15*1024*1024){showToast('15MB 이하 이미지를 선택해주세요');input.value='';return;}
+  showToast('이미지를 준비하고 있어요...');
+  var reader=new FileReader();
+  reader.onload=function(){
+    var img=new Image();
+    img.onload=function(){
+      var maxSide=1280,scale=Math.min(1,maxSide/Math.max(img.width,img.height));
+      var canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
+      var ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      var quality=.82,data=canvas.toDataURL('image/jpeg',quality);
+      while(data.length>CHAT_IMAGE_MAX_CHARS&&quality>.42){quality-=.08;data=canvas.toDataURL('image/jpeg',quality);}
+      if(data.length>CHAT_IMAGE_MAX_CHARS){showToast('이미지가 너무 커요. 더 작은 사진을 선택해주세요');input.value='';return;}
+      pendingChatImage={dataUrl:data,name:(file.name||'사진').replace(/\.[^.]+$/,'')+'.jpg'};
+      renderChat(true);showToast('이미지가 첨부됐어요');
+    };
+    img.onerror=function(){showToast('이미지를 읽지 못했어요');};
+    img.src=reader.result;
+  };
+  reader.onerror=function(){showToast('이미지를 읽지 못했어요');};
+  reader.readAsDataURL(file);
+}
+function removeChatImage(){pendingChatImage=null;renderChat(true);}
+function openChatImage(id){
+  var message=chatMessages.find(function(m){return m.id===id;});
+  if(!message||!message.imageData)return;
+  document.getElementById('chat-lightbox-img').src=message.imageData;
+  document.getElementById('chat-lightbox').classList.add('open');
+}
+function closeChatImage(){
+  document.getElementById('chat-lightbox').classList.remove('open');
+  document.getElementById('chat-lightbox-img').removeAttribute('src');
 }
 function sendChatMessage(){
   var input=document.getElementById('chat-input');
   var personEl=document.getElementById('chat-person');
   var text=input?input.value.trim():'';
-  if(!text){showToast('메시지를 입력해주세요');return;}
+  if(!text&&!pendingChatImage){showToast('메시지나 이미지를 입력해주세요');return;}
   var person=personEl?personEl.value:(localStorage.getItem('smg_chat_person')||PERSONS[0]);
   localStorage.setItem('smg_chat_person',person);
   var nowIso=new Date().toISOString();
-  chatMessages.push({id:uid(),person:person,text:text,createdAt:nowIso,updatedAt:nowIso});
+  var message={id:uid(),person:person,text:text,createdAt:nowIso,updatedAt:nowIso,readBy:[person],likedBy:[]};
+  if(pendingChatImage){message.imageData=pendingChatImage.dataUrl;message.imageName=pendingChatImage.name;}
+  var sendBtn=document.getElementById('chat-send-btn');if(sendBtn)sendBtn.disabled=true;
   if(input)input.value='';
-  save('chat',chatMessages).then(function(){renderChat();});
+  pendingChatImage=null;pendingChatDraft='';
+  writeChatMessage(message).then(function(ok){renderChat();showToast(ok?'보냈어요':'기기에 저장했어요');});
+}
+function toggleChatLike(id){
+  var person=localStorage.getItem('smg_chat_person')||PERSONS[0];
+  mutateChatMessage(id,function(base){
+    var list=Array.isArray(base.likedBy)?base.likedBy.slice():[];
+    var idx=list.indexOf(person);if(idx>=0)list.splice(idx,1);else list.push(person);
+    base.likedBy=list;return base;
+  }).then(function(){renderChat(true);});
 }
 function deleteChatMessage(id){
   if(!confirm('메시지를 삭제할까요?'))return;
-  var idx=chatMessages.findIndex(function(m){return m.id===id;});
-  if(idx>=0)chatMessages[idx]=tombstoneItem(chatMessages[idx]);
-  save('chat',chatMessages).then(function(){renderChat();showToast('삭제했어요');});
+  mutateChatMessage(id,function(base){return tombstoneItem(base);}).then(function(){renderChat();showToast('삭제했어요');});
 }
 function startChatListener(){
-  if(CHAT_UNSUB||!FIREBASE_DB||!currentUser)return;
+  if(CHAT_UNSUB.length||!FIREBASE_DB||!currentUser)return;
   try{
-    CHAT_UNSUB=remoteDoc('chat').onSnapshot(function(doc){
-      var data=doc.exists?(doc.data()||{}).data:null;
-      if(!data||isRecentlySaved('chat'))return;
-      applyRemote('chat',data);
+    var query=FIREBASE_DB.collection(FIREBASE_COLLECTION).doc(FIREBASE_DOC).collection('datasets').where('type','==','chatMessage');
+    CHAT_UNSUB.push(query.onSnapshot(function(snapshot){
+      var remote=[];snapshot.forEach(function(doc){var data=doc.data()||{};if(data.message)remote.push(data.message);});
+      if(!remote.length)return;
+      var wasLatest=latestChatTime();
+      chatMessages=mergeById(chatMessages,remote);cacheChatMessages();
       var chatOpen=document.getElementById('tab-chat').classList.contains('active');
-      if(chatOpen)renderChat();
-      else{updateChatNotice();showToast('새 채팅이 도착했어요');}
+      if(chatOpen)renderChat(true);
+      else if(latestChatTime()>wasLatest){updateChatNotice();showToast('새 채팅이 도착했어요');}
+    }));
+    CHAT_LEGACY_UNSUB=remoteDoc('chat').onSnapshot(function(doc){
+      var data=doc.exists?(doc.data()||{}).data:null;
+      if(!Array.isArray(data)||!data.length)return;
+      var wasLatest=latestChatTime();
+      chatMessages=mergeById(chatMessages,data);cacheChatMessages();
+      var chatOpen=document.getElementById('tab-chat').classList.contains('active');
+      if(chatOpen)renderChat(true);
+      else if(latestChatTime()>wasLatest){updateChatNotice();showToast('새 채팅이 도착했어요');}
     });
   }catch(e){console.warn('chat listener failed',e);}
 }
 function showTab(name,btn){
+  document.body.classList.toggle('chat-mode',name==='chat');
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('tab-'+name).classList.add('active');btn.classList.add('active');
