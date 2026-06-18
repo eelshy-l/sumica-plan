@@ -202,7 +202,8 @@ body.chat-mode .stats-row{display:none}
 .chat-text{font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
 .chat-image{display:block;width:min(360px,100%);max-height:300px;object-fit:cover;border-radius:7px;margin-top:7px;cursor:pointer;background:var(--surface2)}
 .chat-actions{display:flex;align-items:center;gap:6px;margin-top:7px;min-height:24px}
-.chat-react{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+.chat-react{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border:1px solid #efc5c0;border-radius:12px;background:#fff;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+.chat-heart{font-size:14px;line-height:1;color:#d33b30}
 .chat-react.on{color:#c0392b;border-color:#efb7b1;background:var(--red-light)}
 .chat-read{margin-left:auto;font-size:10px;color:var(--text3);font-weight:700;white-space:nowrap}
 .chat-del{border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:12px;padding:2px}
@@ -2037,7 +2038,7 @@ function renderChat(keepScroll){
       h+='<div class="chat-info"><span>'+esc(m.person||'작성자')+'</span><span>'+chatTimeLabel(m.createdAt)+'</span><button class="chat-del" title="삭제" onclick="deleteChatMessage(\''+m.id+'\')"><i class="ti ti-trash"></i></button></div>';
       if(m.text)h+='<div class="chat-text">'+esc(m.text)+'</div>';
       if(m.imageData)h+='<img class="chat-image" src="'+esc(m.imageData)+'" alt="'+esc(m.imageName||'첨부 이미지')+'" onclick="openChatImage(\''+m.id+'\')">';
-      h+='<div class="chat-actions"><button class="chat-react '+(liked?'on':'')+'" onclick="toggleChatLike(\''+m.id+'\')" title="'+esc(likedBy.join(', ')||'좋아요')+'"><i class="ti ti-heart'+(liked?'-filled':'')+'"></i> '+(likedBy.length||'좋아요')+'</button>';
+      h+='<div class="chat-actions"><button class="chat-react '+(liked?'on':'')+'" onclick="toggleChatLike(\''+m.id+'\')" title="'+esc(likedBy.join(', ')||'좋아요')+'"><span class="chat-heart" aria-hidden="true">♥</span> '+(likedBy.length||'좋아요')+'</button>';
       h+='<span class="chat-read">'+esc(chatReadLabel(m,person))+'</span></div></div></div>';
     });
   }
