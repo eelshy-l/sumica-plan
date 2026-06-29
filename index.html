@@ -608,6 +608,51 @@ function sheetExtract(fileName,mediaType,base64,isDesign){
   }).then(function(r){return r.json().catch(function(){return {};}).then(function(j){if(!r.ok)throw new Error(j.error||('extract failed: '+r.status));return j;});})
   .then(function(j){if(!j||j.ok===false||!j.data)throw new Error((j&&j.error)||'extract failed');return j.data;});
 }
+var PDFJS_PROMISE=null;
+function loadPdfJs(){
+  if(PDFJS_PROMISE)return PDFJS_PROMISE;
+  PDFJS_PROMISE=import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs').then(function(pdfjs){
+    pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs';
+    return pdfjs;
+  });
+  return PDFJS_PROMISE;
+}
+function fileToBase64Payload(file){
+  return new Promise(function(resolve,reject){
+    var reader=new FileReader();
+    reader.onload=function(){
+      var result=String(reader.result||'');
+      resolve({fileName:file.name||'',mediaType:file.type||'application/octet-stream',base64:result.split(',')[1]||''});
+    };
+    reader.onerror=function(){reject(reader.error||new Error('파일을 읽지 못했어요'));};
+    reader.readAsDataURL(file);
+  });
+}
+function pdfFirstPageToImagePayload(file){
+  return file.arrayBuffer().then(function(buffer){
+    return loadPdfJs().then(function(pdfjs){
+      return pdfjs.getDocument({data:new Uint8Array(buffer)}).promise;
+    }).then(function(pdf){
+      return pdf.getPage(1);
+    }).then(function(page){
+      var viewport=page.getViewport({scale:2.4});
+      var canvas=document.createElement('canvas');
+      var ctx=canvas.getContext('2d',{alpha:false});
+      canvas.width=Math.ceil(viewport.width);
+      canvas.height=Math.ceil(viewport.height);
+      ctx.fillStyle='#fff';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      return page.render({canvasContext:ctx,viewport:viewport}).promise.then(function(){
+        var dataUrl=canvas.toDataURL('image/jpeg',0.88);
+        return {
+          fileName:String(file.name||'document.pdf').replace(/\.pdf$/i,'.jpg'),
+          mediaType:'image/jpeg',
+          base64:dataUrl.split(',')[1]||''
+        };
+      });
+    });
+  });
+}
 function setSyncStatus(state,text){
   var dot=document.getElementById('sync-dot');
   var label=document.getElementById('sync-text');
@@ -1528,11 +1573,13 @@ function handleFileAndApply(input,statusId,dataId,isDesign,applyFn){
 function processFile(file,statusId,dataId,isDesign,callback){
   var statusEl=document.getElementById(statusId);
   if(statusEl)statusEl.innerHTML='<div class="upload-status loading"><i class="ti ti-loader"></i> 문서를 분석하고 있어요...</div>';
-  var reader=new FileReader();
-  reader.onload=function(){
-    var base64=reader.result.split(',')[1];
-    var mediaType=file.type||'image/jpeg';
-    sheetExtract(file.name||'',mediaType,base64,isDesign)
+  var isPdf=(file.type&&file.type.indexOf('pdf')>=0)||/\.pdf$/i.test(file.name||'');
+  var payloadPromise=isPdf
+    ? (statusEl&&(statusEl.innerHTML='<div class="upload-status loading"><i class="ti ti-loader"></i> PDF를 이미지로 변환해서 분석하고 있어요...</div>'),pdfFirstPageToImagePayload(file).catch(function(){return fileToBase64Payload(file);}))
+    : fileToBase64Payload(file);
+  payloadPromise.then(function(payload){
+    return sheetExtract(payload.fileName||file.name||'',payload.mediaType||file.type||'image/jpeg',payload.base64,isDesign);
+  })
     .then(function(parsed){
       if(document.getElementById(dataId))document.getElementById(dataId).value=JSON.stringify(parsed);
       if(statusEl)statusEl.innerHTML='<div class="upload-status success"><i class="ti ti-check"></i> 인식 완료! 자동 적용됐어요</div>';
@@ -1541,8 +1588,6 @@ function processFile(file,statusId,dataId,isDesign,callback){
       var msg=(err&&err.message)?err.message:'서버 인식 기능이 아직 준비되지 않았어요';
       if(statusEl)statusEl.innerHTML='<div class="upload-status error"><i class="ti ti-alert-circle"></i> '+esc(msg)+' — 직접 입력해주세요</div>';
     });
-  };
-  reader.readAsDataURL(file);
 }
 
 function renderTimeline(){
@@ -1825,6 +1870,46 @@ function renderPlan(f){
   });
   document.getElementById('plan-root').innerHTML=h;
 }
+function todayYMD(){
+  var today=new Date();
+  return today.getFullYear()+'/'+String(today.getMonth()+1).padStart(2,'0')+'/'+String(today.getDate()).padStart(2,'0');
+}
+function syncReportFromPlan(plan){
+  if(!plan||!plan.id)return false;
+  var nowIso=new Date().toISOString();
+  var report=reports.find(function(r){return r.sourcePlanId===plan.id;});
+  if(!report){
+    report=reports.find(function(r){
+      return r.fromPlan&&!r.sourcePlanId&&r.content===plan.content&&r.person===plan.person;
+    });
+  }
+  if(report){
+    report.content=plan.content;
+    report.person=plan.person;
+    report.status='완료';
+    report.memo=plan.memo||'';
+    report.site=plan.site||'';
+    report.fromPlan=true;
+    report.sourcePlanId=plan.id;
+    report.updatedAt=nowIso;
+    if(!report.date)report.date=todayYMD();
+    return true;
+  }
+  reports.unshift({
+    id:uid(),
+    content:plan.content,
+    date:todayYMD(),
+    person:plan.person,
+    status:'완료',
+    memo:plan.memo||'',
+    site:plan.site||'',
+    fromPlan:true,
+    sourcePlanId:plan.id,
+    createdAt:nowIso,
+    updatedAt:nowIso
+  });
+  return true;
+}
 function quickStatus(id){
   var plan=plans.find(function(x){return x.id===id;}); if(!plan)return;
   var cycle=['','예정','진행 중','완료'];
@@ -1833,13 +1918,8 @@ function quickStatus(id){
   plan.status=next;
   plan.updatedAt=new Date().toISOString();
   if(next==='완료'&&prev!=='완료'){
-    var today=new Date();
-    var ds=today.getFullYear()+'/'+(String(today.getMonth()+1).padStart(2,'0'))+'/'+String(today.getDate()).padStart(2,'0');
-    if(!reports.some(function(r){return r.content===plan.content&&r.person===plan.person;})){
-      reports.unshift({id:uid(),content:plan.content,date:ds,person:plan.person,status:'완료',memo:plan.memo||'',site:plan.site||'',fromPlan:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
-      save('reports',reports);
-    }
-    save('plans',plans).then(function(){renderPlan();showToast('완료 ✓ → 업무 보고에 자동 추가됐어요');});
+    syncReportFromPlan(plan);
+    Promise.all([save('reports',reports),save('plans',plans)]).then(function(){renderPlan();renderReport();showToast('완료 ✓ → 업무 보고에 자동 추가됐어요');});
   } else {
     save('plans',plans).then(function(){renderPlan();showToast('상태: '+(next||'—'));});
   }
@@ -1878,14 +1958,10 @@ function saveTaskForm(type,id){
   var ni={id:id||uid(),content:content,date:ds,day:_dayStr,person:document.getElementById('fi-person').value,status:newStatus,memo:document.getElementById('fi-memo').value,site:document.getElementById('fi-site').value,createdAt:oldItem.createdAt||nowIso,updatedAt:nowIso};
   if(id){var idx=arr.findIndex(function(x){return x.id===id;});if(idx>=0)arr[idx]=ni;}else arr.unshift(ni);
   if(!isR&&newStatus==='완료'&&prevStatus!=='완료'){
-    var today=new Date();
-    var todayStr=today.getFullYear()+'/'+(String(today.getMonth()+1).padStart(2,'0'))+'/'+String(today.getDate()).padStart(2,'0');
-    if(!reports.some(function(r){return r.content===content&&r.person===ni.person;})){
-      reports.unshift({id:uid(),content:content,date:todayStr,person:ni.person,status:'완료',memo:ni.memo||'',site:ni.site||'',fromPlan:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
-      save('reports',reports);
-    }
+    syncReportFromPlan(ni);
   }
   if(isR){save('reports',reports).then(function(){renderReport();});}
+  else if(newStatus==='완료'&&prevStatus!=='완료'){Promise.all([save('reports',reports),save('plans',plans)]).then(function(){renderPlan();renderReport();});}
   else{save('plans',plans).then(function(){renderPlan();});}
   closeForm();
   if(!isR&&newStatus==='완료'&&prevStatus!=='완료')showToast('완료됐어요 ✓ → 업무 보고에 자동 추가됐어요');
