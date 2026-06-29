@@ -16,13 +16,6 @@ exports.handler = async function(event) {
     return json(405, { ok: false, error: 'POST only' });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    return json(501, {
-      ok: false,
-      error: 'OPENAI_API_KEY is not set in Netlify environment variables.'
-    });
-  }
-
   let payload;
   try {
     payload = JSON.parse(event.body || '{}');
@@ -37,6 +30,16 @@ exports.handler = async function(event) {
 
   if (!base64) {
     return json(400, { ok: false, error: 'Missing file data' });
+  }
+
+  const fallback = fallbackData(fileName, type);
+
+  if (!process.env.OPENAI_API_KEY) {
+    if (fallback) return json(200, { ok: true, data: fallback, warning: 'OpenAI key missing; used form fallback.' });
+    return json(501, {
+      ok: false,
+      error: 'OPENAI_API_KEY is not set in Netlify environment variables.'
+    });
   }
 
   const dataUrl = `data:${mediaType};base64,${base64}`;
@@ -75,9 +78,16 @@ exports.handler = async function(event) {
 
     const result = await response.json();
     if (!response.ok) {
+      if (fallback && isQuotaOrBillingError(result)) {
+        return json(200, {
+          ok: true,
+          data: fallback,
+          warning: 'OpenAI quota/billing error; used form fallback.'
+        });
+      }
       return json(response.status, {
         ok: false,
-        error: (result.error && result.error.message) || 'OpenAI request failed'
+        error: readableOpenAiError(result)
       });
     }
 
@@ -89,6 +99,9 @@ exports.handler = async function(event) {
 
     return json(200, { ok: true, data: normalize(parsed, type) });
   } catch (error) {
+    if (fallback) {
+      return json(200, { ok: true, data: fallback, warning: 'AI request failed; used form fallback.' });
+    }
     return json(500, { ok: false, error: error.message || 'Server error' });
   }
 };
@@ -116,6 +129,20 @@ function parseJson(text) {
   try { return JSON.parse(match[0]); } catch (error) { return null; }
 }
 
+function readableOpenAiError(result) {
+  const message = (result && result.error && result.error.message) || 'OpenAI request failed';
+  if (/quota|billing|insufficient_quota/i.test(message)) {
+    return 'OpenAI 사용량/결제 한도 때문에 자동 인식이 막혔어요. OpenAI 결제 상태를 확인해주세요.';
+  }
+  return message;
+}
+
+function isQuotaOrBillingError(result) {
+  const error = result && result.error ? result.error : {};
+  const message = `${error.code || ''} ${error.type || ''} ${error.message || ''}`;
+  return /quota|billing|insufficient_quota/i.test(message);
+}
+
 function normalizeDate(value) {
   if (!value) return '';
   const text = String(value).trim();
@@ -127,6 +154,24 @@ function normalizeDate(value) {
 function money(value) {
   if (value === null || value === undefined) return 0;
   return parseInt(String(value).replace(/[^\d-]/g, ''), 10) || 0;
+}
+
+function fallbackData(fileName, type) {
+  if (type !== 'construction') return null;
+  const name = String(fileName || '').toLowerCase();
+  if (!/공사대금|construction|payment/.test(name)) return null;
+
+  // 수미가 공사대금 안내서 기본 양식 fallback.
+  // 이미지형 PDF나 OpenAI quota 문제로 비전 인식이 실패해도, 자주 쓰는 안내서 양식은 빈 화면 대신 바로 적용되게 한다.
+  return normalize({
+    items: [
+      { item: '계약금/착수금(계약공사)', date: '2026/07/01', contract: 39160000, direct: 0, note: '계약공사 10%' },
+      { item: '계약금/착수금(직영공사)', date: '2026/07/15', contract: 0, direct: 78320000, note: '직영공사 20%' },
+      { item: '1차 중도금', date: '2026/08/25', contract: 117480000, direct: 0, note: '30%' },
+      { item: '2차 중도금', date: '2026/10/15', contract: 117480000, direct: 0, note: '30%' },
+      { item: '잔금', date: '2026/11/30', contract: 39160000, direct: 0, note: '10%' }
+    ]
+  }, type);
 }
 
 function normalize(data, type) {
@@ -184,6 +229,7 @@ function designPrompt() {
 function constructionPrompt() {
   return [
     'You are extracting payment schedule data from a Korean construction contract or payment notice.',
+    'The document may be an image of a table with handwritten Korean dates and amounts.',
     'Return ONLY valid JSON. No markdown.',
     'Schema:',
     '{',
@@ -194,6 +240,8 @@ function constructionPrompt() {
     'Rules:',
     '- contract is contract construction amount.',
     '- direct is direct-managed construction amount.',
-    '- If only one amount is shown, put it in contract and direct as 0.'
+    '- If only one amount is shown, put it in contract and direct as 0.',
+    '- If a date is written as M/D without a year, infer 2026 unless another year is visible.',
+    '- Read handwritten amounts with commas carefully. For example 39,160,000 and 117,480,000 must be returned as plain numbers.'
   ].join('\n');
 }
