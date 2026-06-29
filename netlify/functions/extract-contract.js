@@ -78,11 +78,13 @@ exports.handler = async function(event) {
 
     const result = await response.json();
     if (!response.ok) {
-      if (fallback && isQuotaOrBillingError(result)) {
+      if (fallback) {
         return json(200, {
           ok: true,
           data: fallback,
-          warning: 'OpenAI quota/billing error; used form fallback.'
+          warning: isQuotaOrBillingError(result)
+            ? 'OpenAI quota/billing error; used form fallback.'
+            : 'OpenAI extraction failed; used form fallback.'
         });
       }
       return json(response.status, {
