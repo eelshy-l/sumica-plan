@@ -45,6 +45,30 @@ body.unlocked .access-gate{display:none}
 .stat-val{font-size:34px;font-weight:800;letter-spacing:-1.5px}
 .panel{display:none}.panel.active{display:block}
 body.chat-mode .stats-row{display:none}
+.order-shell{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.order-main,.order-side{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.order-toolbar{padding:16px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.order-toolbar .form-input{width:auto;min-width:240px;padding:8px 12px}
+.order-doc{padding:28px;background:#fff}
+.order-doc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:18px;border-bottom:2px solid var(--text);margin-bottom:20px}
+.order-doc-title{font-size:26px;font-weight:900;letter-spacing:-1px}.order-doc-site{font-size:14px;color:var(--text2);margin-top:4px}
+.order-doc-meta{text-align:right;font-size:11px;color:var(--text3);line-height:1.7}
+.order-category{margin-bottom:24px;break-inside:avoid}.order-category:last-child{margin-bottom:0}
+.order-category-title{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--accent);color:#fff;font-size:14px;font-weight:800}
+.order-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px}
+.order-table th{background:#eef3f0;color:#526058;font-size:10px;text-align:center;padding:7px 5px;border:1px solid #ccd7d0}
+.order-table td{padding:8px 6px;border:1px solid #d9dfdb;vertical-align:middle;word-break:keep-all;overflow-wrap:anywhere}
+.order-table tr:hover td{background:#f8faf9}.order-table .order-photo-cell{text-align:center;padding:4px}
+.order-photo{width:56px;height:56px;object-fit:contain;border-radius:4px;background:#f4f4f2;display:block;margin:auto}
+.order-photo-empty{width:56px;height:44px;margin:auto;border:1px dashed #d6d6d2;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:9px}
+.order-status{display:inline-block;padding:2px 7px;border-radius:12px;font-size:10px;font-weight:800;white-space:nowrap}
+.order-status.pending{background:#fef3c7;color:#92400e}.order-status.ordered{background:#dbeafe;color:#1e40af}.order-status.received{background:#d1fae5;color:#065f46}.order-status.hold{background:#f3f4f6;color:#4b5563}
+.order-empty{padding:70px 20px;text-align:center;color:var(--text3)}
+.order-side{padding:18px;position:sticky;top:76px}.order-side h3{font-size:15px;margin-bottom:12px}
+.order-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}.order-summary-card{background:var(--surface2);border-radius:8px;padding:10px}.order-summary-card b{display:block;font-size:22px}.order-summary-card span{font-size:10px;color:var(--text3)}
+.order-guide{font-size:12px;color:var(--text2);line-height:1.7;padding-top:14px;border-top:1px solid var(--border)}
+.order-actions{display:flex;gap:6px;justify-content:center}.order-actions button{width:26px;height:26px;border:0;border-radius:6px;background:transparent;cursor:pointer;color:var(--text3)}.order-actions button:hover{background:var(--surface2);color:var(--text)}
+.order-pdf-rendering .order-actions{display:none}.order-pdf-rendering .order-table tr:hover td{background:#fff}
 .site-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .site-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .2s;position:relative;box-shadow:var(--shadow)}
 .site-card:hover{border-color:var(--border2);box-shadow:var(--shadow-md);transform:translateY(-1px)}
@@ -390,6 +414,7 @@ body{background:linear-gradient(180deg,#f7faf8 0,#f2f5f3 360px,#f5f7f6 100%);col
   .site-card:hover{transform:none;box-shadow:var(--shadow)}
   .modal{border-radius:0}
   .modal-header{padding:13px 14px 10px}
+  .order-shell{grid-template-columns:1fr}.order-side{position:static;order:-1}.order-doc{padding:16px;overflow-x:auto}.order-doc-head{min-width:760px}.order-category{min-width:760px}.order-toolbar .form-input{width:100%;min-width:0}
 }
 
 </style>
@@ -416,6 +441,7 @@ body{background:linear-gradient(180deg,#f7faf8 0,#f2f5f3 360px,#f5f7f6 100%);col
     <button class="tab-btn" data-tab="calendar" onclick="showTab('calendar',this)"><i class="ti ti-calendar"></i> 이벤트</button>
     <button class="tab-btn" data-tab="report" onclick="showTab('report',this)"><i class="ti ti-clipboard-check"></i> 업무 보고</button>
     <button class="tab-btn" data-tab="plan" onclick="showTab('plan',this)"><i class="ti ti-checklist"></i> 업무 계획</button>
+    <button class="tab-btn" data-tab="orders" onclick="showTab('orders',this)"><i class="ti ti-package"></i> 발주리스트</button>
     <button class="tab-btn" data-tab="chat" onclick="showTab('chat',this)"><i class="ti ti-message-circle"></i> 채팅</button>
   </nav>
 </header>
@@ -426,6 +452,7 @@ body{background:linear-gradient(180deg,#f7faf8 0,#f2f5f3 360px,#f5f7f6 100%);col
   <div id="tab-calendar" class="panel"><div id="calendar-root"></div></div>
   <div id="tab-report" class="panel"><div id="report-root"></div></div>
   <div id="tab-plan" class="panel"><div id="plan-root"></div></div>
+  <div id="tab-orders" class="panel"><div id="orders-root"></div></div>
   <div id="tab-chat" class="panel"><div id="chat-root"></div></div>
 </main>
 <div class="ev-popup" id="ev-popup">
@@ -466,6 +493,7 @@ body{background:linear-gradient(180deg,#f7faf8 0,#f2f5f3 360px,#f5f7f6 100%);col
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
 <script>
 // Firebase 설정값은 Firebase Console > Project settings > Your apps > Web app에서 복사해 넣으세요.
 // 값이 비어 있으면 앱은 안전하게 로컬 모드로만 동작합니다.
@@ -714,6 +742,8 @@ var reportFilter='',planFilter='';
 var openWeeks={};
 var baseTitle=document.title,chatUnread=false,CHAT_LAST_SEEN_KEY='smg_chat_seen_at';
 var pendingChatImage=null,pendingChatDraft='',chatReadSaving={},CHAT_IMAGE_MAX_CHARS=720000;
+var currentOrderSiteId='';
+var ORDER_CATEGORIES=['기기','가전','콘센트·스위치','조명','외벽 마감','벽지','창호·도어','욕실','가구','기타'];
 
 // ── API ────────────────────────────────────────────────
 function getLocalData(key,fallback){
@@ -1955,6 +1985,7 @@ function formDeleteAction(){
   if(!confirm('삭제할까요?'))return;
   if(type==='report'){var ri=reports.findIndex(function(r){return r.id===id;});if(ri>=0)reports[ri]=tombstoneItem(reports[ri]);save('reports',reports).then(function(){renderReport();});}
   else if(type==='event'){var ei=events.findIndex(function(e){return e.id===id;});if(ei>=0)events[ei]=tombstoneItem(events[ei]);save('events',events).then(function(){renderCalendar();});}
+  else if(type==='order'){var os=getOrderSite();if(os){os.orderItems=(os.orderItems||[]).filter(function(item){return item.id!==id;});os.updatedAt=new Date().toISOString();save('sites',sites).then(function(){renderOrders();});}}
   else{var pi=plans.findIndex(function(p){return p.id===id;});if(pi>=0)plans[pi]=tombstoneItem(plans[pi]);save('plans',plans).then(function(){renderPlan();});}
   closeForm();showToast('삭제했어요');
 }
@@ -2203,6 +2234,112 @@ function startChatListener(){
     });
   }catch(e){console.warn('chat listener failed',e);}
 }
+
+// ── 현장별 발주리스트 ──────────────────────────────────
+function getOrderSite(){
+  var active=activeList(sites);
+  if(!active.length)return null;
+  var found=active.find(function(s){return s.id===currentOrderSiteId;});
+  if(!found){found=active[0];currentOrderSiteId=found.id;}
+  if(!Array.isArray(found.orderItems))found.orderItems=[];
+  return found;
+}
+function orderStatusClass(status){
+  return status==='발주완료'?'ordered':status==='입고완료'?'received':status==='보류'?'hold':'pending';
+}
+function orderCategoryList(items){
+  var list=ORDER_CATEGORIES.slice();
+  items.forEach(function(item){if(item.category&&list.indexOf(item.category)<0)list.push(item.category);});
+  return list.filter(function(category){return items.some(function(item){return item.category===category;});});
+}
+function renderOrders(){
+  var root=document.getElementById('orders-root');if(!root)return;
+  var active=activeList(sites),site=getOrderSite();
+  if(!site){root.innerHTML='<div class="panel-box order-empty">먼저 현장을 추가해주세요.</div>';return;}
+  var items=activeList(site.orderItems||[]);
+  var ordered=items.filter(function(item){return item.status==='발주완료'||item.status==='입고완료';}).length;
+  var received=items.filter(function(item){return item.status==='입고완료';}).length;
+  var options=active.map(function(s){return '<option value="'+esc(s.id)+'" '+(s.id===site.id?'selected':'')+'>'+esc(s.short||s.name)+'</option>';}).join('');
+  root.innerHTML='<div class="order-shell"><div class="order-main">'+
+    '<div class="order-toolbar"><select class="form-input" id="order-site-select" onchange="selectOrderSite(this.value)">'+options+'</select>'+
+    '<button class="btn-primary" onclick="openOrderForm()"><i class="ti ti-plus"></i> 품목 추가</button>'+
+    '<button class="btn-secondary" id="order-pdf-btn" onclick="downloadOrderPdf()"><i class="ti ti-file-type-pdf"></i> PDF 다운로드</button></div>'+
+    '<div class="order-doc" id="order-print-sheet">'+renderOrderDocument(site,items)+'</div></div>'+
+    '<aside class="order-side"><h3>발주 현황</h3><div class="order-summary">'+
+    '<div class="order-summary-card"><b>'+items.length+'</b><span>전체 품목</span></div>'+
+    '<div class="order-summary-card"><b>'+ordered+'</b><span>발주 이상</span></div>'+
+    '<div class="order-summary-card"><b>'+received+'</b><span>입고 완료</span></div>'+
+    '<div class="order-summary-card"><b>'+Math.max(0,items.length-ordered)+'</b><span>발주 전</span></div></div>'+
+    '<div class="order-guide">HWP 리스트처럼 카테고리별로 품목을 정리합니다.<br><br>이미지는 웹에서 확인 가능한 이미지 주소를 입력하면 화면과 PDF에 함께 표시됩니다.<br><br>PDF는 건축주 전달용으로 편집·삭제 버튼 없이 저장됩니다.</div></aside></div>';
+}
+function renderOrderDocument(site,items){
+  var today=new Date(),dateText=today.getFullYear()+'. '+String(today.getMonth()+1).padStart(2,'0')+'. '+String(today.getDate()).padStart(2,'0')+'.';
+  var h='<div class="order-doc-head"><div><div class="order-doc-title">발주 · 선정 리스트</div><div class="order-doc-site">'+esc(site.name||site.short)+'</div></div><div class="order-doc-meta">작성일 '+dateText+'<br>수미가 설계부</div></div>';
+  if(!items.length)return h+'<div class="order-empty"><i class="ti ti-package" style="font-size:34px;display:block;margin-bottom:8px"></i>등록된 발주 품목이 없습니다.<br>위의 ‘품목 추가’ 버튼으로 시작하세요.</div>';
+  orderCategoryList(items).forEach(function(category){
+    var rows=items.filter(function(item){return item.category===category;});
+    h+='<section class="order-category"><div class="order-category-title"><span>'+esc(category)+'</span><span>'+rows.length+'개 품목</span></div>'+
+      '<table class="order-table"><colgroup><col style="width:12%"><col style="width:18%"><col style="width:18%"><col style="width:11%"><col style="width:9%"><col style="width:8%"><col style="width:10%"><col style="width:8%"><col style="width:6%"></colgroup>'+
+      '<thead><tr><th>이미지</th><th>제품명</th><th>규격 / 모델</th><th>구매처</th><th>색상</th><th>수량</th><th>상태 / 예정일</th><th>비고</th><th class="order-actions">관리</th></tr></thead><tbody>';
+    rows.forEach(function(item){
+      var photo=item.imageUrl?'<img class="order-photo" crossorigin="anonymous" src="'+esc(item.imageUrl)+'" alt="'+esc(item.name)+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="order-photo-empty" style="display:none">이미지 없음</div>':'<div class="order-photo-empty">이미지 없음</div>';
+      h+='<tr><td class="order-photo-cell">'+photo+'</td><td><strong>'+esc(item.name||'')+'</strong></td><td>'+esc(item.spec||'').replace(/\n/g,'<br>')+'</td><td>'+esc(item.vendor||'')+'</td><td>'+esc(item.color||'')+'</td><td style="text-align:center">'+esc(item.quantity||'')+(item.unit?' '+esc(item.unit):'')+'</td>'+
+        '<td style="text-align:center"><span class="order-status '+orderStatusClass(item.status)+'">'+esc(item.status||'발주 전')+'</span>'+(item.dueDate?'<div style="font-size:10px;color:var(--text3);margin-top:4px">'+esc(item.dueDate)+'</div>':'')+'</td><td>'+esc(item.note||'')+'</td>'+
+        '<td class="order-actions"><button title="수정" onclick="openOrderForm(\''+item.id+'\')"><i class="ti ti-pencil"></i></button><button title="삭제" onclick="deleteOrderItem(\''+item.id+'\')"><i class="ti ti-trash"></i></button></td></tr>';
+    });
+    h+='</tbody></table></section>';
+  });
+  return h;
+}
+function selectOrderSite(id){currentOrderSiteId=id;renderOrders();}
+function openOrderForm(id){
+  var site=getOrderSite();if(!site)return;
+  var item=id?(site.orderItems||[]).find(function(row){return row.id===id;}):null;
+  var category=item&&item.category?item.category:ORDER_CATEGORIES[0];
+  var categories=ORDER_CATEGORIES.slice();if(categories.indexOf(category)<0)categories.push(category);
+  var categoryOptions=categories.map(function(value){return '<option value="'+esc(value)+'" '+(value===category?'selected':'')+'>'+esc(value)+'</option>';}).join('');
+  var statuses=['발주 전','발주완료','입고완료','보류'].map(function(value){return '<option value="'+value+'" '+(item&&item.status===value?'selected':'')+'>'+value+'</option>';}).join('');
+  document.getElementById('form-title').textContent=item?'발주 품목 수정':'발주 품목 추가';
+  document.getElementById('form-modal').style.maxWidth='760px';
+  document.getElementById('form-body').innerHTML=
+    '<div class="form-row"><div class="form-group"><label class="form-label">카테고리</label><select class="form-input" id="oi-category">'+categoryOptions+'</select></div><div class="form-group"><label class="form-label">진행 상태</label><select class="form-input" id="oi-status">'+statuses+'</select></div></div>'+
+    '<div class="form-group"><label class="form-label">제품명 *</label><input class="form-input" id="oi-name" value="'+esc(item?item.name:'')+'" placeholder="예: BESPOKE AI 콤보"></div>'+
+    '<div class="form-group"><label class="form-label">규격 / 모델</label><textarea class="form-input" id="oi-spec" rows="3" placeholder="모델명, 크기, 전력, 설치 조건 등">'+esc(item?item.spec:'')+'</textarea></div>'+
+    '<div class="form-row"><div class="form-group"><label class="form-label">구매처 / 브랜드</label><input class="form-input" id="oi-vendor" value="'+esc(item?item.vendor:'')+'"></div><div class="form-group"><label class="form-label">색상</label><input class="form-input" id="oi-color" value="'+esc(item?item.color:'')+'"></div></div>'+
+    '<div class="form-row"><div class="form-group"><label class="form-label">수량</label><input class="form-input" id="oi-quantity" value="'+esc(item?item.quantity:'')+'" inputmode="decimal"></div><div class="form-group"><label class="form-label">단위</label><input class="form-input" id="oi-unit" value="'+esc(item?item.unit||'EA':'EA')+'" placeholder="EA, SET, M"></div></div>'+
+    '<div class="form-group"><label class="form-label">발주 / 입고 예정일</label><input class="form-input" id="oi-due" type="date" value="'+esc(item?item.dueDate:'')+'"></div>'+
+    '<div class="form-group"><label class="form-label">이미지 URL</label><input class="form-input" id="oi-image" type="url" value="'+esc(item?item.imageUrl:'')+'" placeholder="https://..."><div class="muted" style="margin-top:5px">웹에서 열 수 있는 이미지 주소를 붙여 넣으세요.</div></div>'+
+    '<div class="form-group"><label class="form-label">비고</label><textarea class="form-input" id="oi-note" rows="2" placeholder="건축주 확인사항, 설치 조건 등">'+esc(item?item.note:'')+'</textarea></div>'+
+    '<div style="display:flex;gap:8px"><button class="btn-primary" onclick="saveOrderItem(\''+(id||'')+'\')">저장</button><button class="btn-secondary" onclick="closeForm()">닫기</button></div>';
+  window._formDeleteType='order';window._formDeleteId=id||null;
+  var del=document.getElementById('form-del-btn');if(del)del.style.display=id?'inline-block':'none';
+  document.getElementById('form-bg').classList.add('open');
+  setTimeout(function(){document.getElementById('oi-name').focus();},50);
+}
+function saveOrderItem(id){
+  var site=getOrderSite();if(!site)return;
+  var name=document.getElementById('oi-name').value.trim();if(!name){showToast('제품명을 입력해주세요');return;}
+  var old=id?(site.orderItems||[]).find(function(item){return item.id===id;}):null,now=new Date().toISOString();
+  var item={id:id||uid(),category:document.getElementById('oi-category').value,name:name,spec:document.getElementById('oi-spec').value.trim(),vendor:document.getElementById('oi-vendor').value.trim(),color:document.getElementById('oi-color').value.trim(),quantity:document.getElementById('oi-quantity').value.trim(),unit:document.getElementById('oi-unit').value.trim(),status:document.getElementById('oi-status').value,dueDate:document.getElementById('oi-due').value,imageUrl:document.getElementById('oi-image').value.trim(),note:document.getElementById('oi-note').value.trim(),createdAt:old&&old.createdAt?old.createdAt:now,updatedAt:now};
+  if(!Array.isArray(site.orderItems))site.orderItems=[];
+  if(id){var index=site.orderItems.findIndex(function(row){return row.id===id;});if(index>=0)site.orderItems[index]=item;else site.orderItems.push(item);}else site.orderItems.push(item);
+  site.updatedAt=now;save('sites',sites).then(function(){renderOrders();renderGrid();});closeForm();showToast('발주 품목을 저장했어요');
+}
+function deleteOrderItem(id){
+  if(!confirm('이 발주 품목을 삭제할까요?'))return;
+  var site=getOrderSite();if(!site)return;
+  site.orderItems=(site.orderItems||[]).filter(function(item){return item.id!==id;});site.updatedAt=new Date().toISOString();
+  save('sites',sites).then(function(){renderOrders();});showToast('발주 품목을 삭제했어요');
+}
+function downloadOrderPdf(){
+  var site=getOrderSite(),sheet=document.getElementById('order-print-sheet'),button=document.getElementById('order-pdf-btn');if(!site||!sheet)return;
+  if(typeof html2pdf==='undefined'){showToast('PDF 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요');return;}
+  button.disabled=true;button.innerHTML='<i class="ti ti-loader-2"></i> PDF 만드는 중...';sheet.classList.add('order-pdf-rendering');
+  var filename=(site.short||site.name||'현장').replace(/[\\/:*?"<>|]/g,'_')+'_발주리스트.pdf';
+  var option={margin:[8,7,9,7],filename:filename,image:{type:'jpeg',quality:.96},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy'],avoid:['.order-category','tr']}};
+  html2pdf().set(option).from(sheet).save().then(function(){showToast('PDF를 다운로드했어요');}).catch(function(err){console.warn(err);showToast('PDF 생성에 실패했어요');}).finally(function(){sheet.classList.remove('order-pdf-rendering');button.disabled=false;button.innerHTML='<i class="ti ti-file-type-pdf"></i> PDF 다운로드';});
+}
+
 function showTab(name,btn){
   document.body.classList.toggle('chat-mode',name==='chat');
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
@@ -2212,6 +2349,7 @@ function showTab(name,btn){
   else if(name==='calendar'){goToday();}
   else if(name==='report')renderReport();
   else if(name==='plan')renderPlan();
+  else if(name==='orders')renderOrders();
   else if(name==='chat')renderChat();
 }
 function closeBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
