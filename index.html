@@ -1288,19 +1288,10 @@ function openDesignFeeModal(id){
     '<div class="form-group"><label class="form-label">비고</label><input class="form-input" id="dfn-note"></div>'+
     '<div style="display:flex;gap:8px"><button class="btn-primary" id="dfn-save" onclick="dfSaveItem()">추가</button>'+
     '<button class="btn-secondary" onclick="document.getElementById(\'df-add-form\').style.display=\'none\'">취소</button></div></div>'+
-    '<div class="section-sep">계약서 파일 첨부 (AI 자동 파싱)</div>'+
-    '<div class="upload-area" id="df-up-area" onclick="document.getElementById(\'df-up-input\').click()">'+
-    '<div class="upload-area-icon"><i class="ti ti-file-invoice"></i></div>'+
-    '<div class="upload-area-text">설계 계약서를 올려주세요 (PDF, JPG, PNG)</div>'+
-    '<div class="upload-area-sub">계약일, 만료일, 기준면적, 설계비를 자동으로 읽어요</div></div>'+
-    '<input type="file" id="df-up-input" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handleFileAndApply(this,\'df-up-status\',\'df-up-data\',true,\'dfApplyFile\')">'+
-    '<div id="df-up-status"></div><input type="hidden" id="df-up-data">'+
     '<div style="display:flex;gap:10px;margin-top:16px">'+
-    '<button class="btn-primary" onclick="dfApplyFile()"><i class="ti ti-file-check"></i> 파일 적용</button>'+
     '<button class="btn-primary" onclick="dfSaveAll(\''+id+'\')"><i class="ti ti-device-floppy"></i> 저장</button>'+
     '<button class="btn-secondary" onclick="closeForm()">닫기</button></div>';
 
-  setupDragDrop('df-up-area','df-up-input','df-up-status','df-up-data',true);
 
   window.dfToggle=function(i){df.items[i].done=!df.items[i].done;renderItems();};
   window.dfEditItem=function(i){
@@ -1410,19 +1401,10 @@ function openConstModal(id){
     '<div class="form-group"><label class="form-label">비고</label><input class="form-input" id="csn-note" placeholder="예) 골조공사 완료시"></div>'+
     '<div style="display:flex;gap:8px"><button class="btn-primary" id="csn-save" onclick="csSaveItem()">추가</button>'+
     '<button class="btn-secondary" onclick="document.getElementById(\'cs-add-form\').style.display=\'none\'">취소</button></div></div>'+
-    '<div class="section-sep">계약서 파일 첨부 (AI 자동 파싱)</div>'+
-    '<div class="upload-area" id="cs-up-area" onclick="document.getElementById(\'cs-up-input\').click()">'+
-    '<div class="upload-area-icon"><i class="ti ti-file-text"></i></div>'+
-    '<div class="upload-area-text">공사대금 계약서 / 안내서를 올려주세요 (PDF, JPG, PNG)</div>'+
-    '<div class="upload-area-sub">납부 항목과 금액을 자동으로 읽어요</div></div>'+
-    '<input type="file" id="cs-up-input" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="handleFileAndApply(this,\'cs-up-status\',\'cs-up-data\',false,\'csApplyFile\')">'+
-    '<div id="cs-up-status"></div><input type="hidden" id="cs-up-data">'+
     '<div style="display:flex;gap:10px;margin-top:16px">'+
-    '<button class="btn-primary" onclick="csApplyFile()"><i class="ti ti-file-check"></i> 파일 적용</button>'+
     '<button class="btn-primary" onclick="csSaveAll(\''+id+'\')"><i class="ti ti-device-floppy"></i> 저장</button>'+
     '<button class="btn-secondary" onclick="closeForm()">닫기</button></div>';
 
-  setupDragDrop('cs-up-area','cs-up-input','cs-up-status','cs-up-data',false);
 
   window.csToggle=function(i){s.payment[i].done=!s.payment[i].done;renderItems();};
   window.csEditItem=function(i){
