@@ -94,6 +94,9 @@ body.chat-mode .stats-row{display:none}
 .filter-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
 .filter-btn{padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-family:inherit;font-weight:500}
 .filter-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.site-person-index-label{font-size:12px;font-weight:800;color:var(--text3);margin-right:4px}
+.calendar-pdf-rendering .cal-no-print{display:none!important}
+.calendar-pdf-rendering{box-shadow:none!important;border:none!important}
 .add-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit;font-weight:500}
 .add-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 .task-table{width:100%;border-collapse:collapse;font-size:14px}
@@ -437,7 +440,6 @@ body{background:linear-gradient(180deg,#f7faf8 0,#f2f5f3 360px,#f5f7f6 100%);col
   </div>
   <nav class="tabs-nav">
     <button class="tab-btn active" data-tab="sites" onclick="showTab('sites',this)"><i class="ti ti-building"></i> 현장</button>
-    <button class="tab-btn" data-tab="timeline" onclick="showTab('timeline',this)"><i class="ti ti-chart-gantt"></i> 타임라인</button>
     <button class="tab-btn" data-tab="calendar" onclick="showTab('calendar',this)"><i class="ti ti-calendar"></i> 이벤트</button>
     <button class="tab-btn" data-tab="report" onclick="showTab('report',this)"><i class="ti ti-clipboard-check"></i> 업무 보고</button>
     <button class="tab-btn" data-tab="plan" onclick="showTab('plan',this)"><i class="ti ti-checklist"></i> 업무 계획</button>
@@ -447,8 +449,11 @@ body{background:linear-gradient(180deg,#f7faf8 0,#f2f5f3 360px,#f5f7f6 100%);col
 </header>
 <main class="main">
   <div class="stats-row" id="stats-row"></div>
-  <div id="tab-sites" class="panel active"><div class="site-grid" id="site-grid"></div></div>
-  <div id="tab-timeline" class="panel"><div id="timeline-root"></div></div>
+  <div id="tab-sites" class="panel active">
+    <div class="filter-row" id="site-person-index"></div>
+    <div class="site-grid" id="site-grid"></div>
+    <div id="timeline-root" style="margin-top:20px"></div>
+  </div>
   <div id="tab-calendar" class="panel"><div id="calendar-root"></div></div>
   <div id="tab-report" class="panel"><div id="report-root"></div></div>
   <div id="tab-plan" class="panel"><div id="plan-root"></div></div>
@@ -735,6 +740,7 @@ var PERSONS=['이승현','정현진','이선주'];
 var COMPANIES=['(주)수미가','(주)수미가 종합건설'];
 
 var sites=[],reports=[],plans=[],events=[],chatMessages=[],checkState={},openBlocks={};
+var sitePersonFilter='전체';
 var isSaving=false,lastSaveTime=0;
 var _todayInit=new Date();
 var calYear=_todayInit.getFullYear(),calMonth=_todayInit.getMonth()+1;
@@ -952,7 +958,7 @@ function calcProgress(s){
   return Math.min(v,99);
 }
 
-function renderAll(){renderStats();renderGrid();}
+function renderAll(){renderStats();renderGrid();renderTimeline();}
 
 function renderStats(){
   var el=document.getElementById('stats-row');
@@ -967,7 +973,14 @@ function renderStats(){
 function renderGrid(){
   var el=document.getElementById('site-grid');
   if(!el)return;
-  var html=sites.map(function(s){
+  var index=document.getElementById('site-person-index');
+  if(index){
+    index.innerHTML='<span class="site-person-index-label">담당자별 보기</span>'+['전체'].concat(PERSONS).map(function(p){
+      return '<button class="filter-btn '+(sitePersonFilter===p?'on':'')+'" onclick="setSitePersonFilter(\''+p+'\')">'+p+' <span style="opacity:.72">'+(p==='전체'?sites.length:sites.filter(function(s){return s.person===p;}).length)+'</span></button>';
+    }).join('');
+  }
+  var filtered=sitePersonFilter==='전체'?sites:sites.filter(function(s){return s.person===sitePersonFilter;});
+  var html=filtered.map(function(s){
     var p=calcProgress(s);
     return '<div class="site-card" onclick="openSiteModal(\''+s.id+'\')">'+
       '<div class="site-card-top"><div class="site-name">'+(s.short||s.name)+'</div>'+stageBadge(s.stage)+'</div>'+
@@ -984,6 +997,11 @@ function renderGrid(){
   }).join('');
   html+='<div class="site-add-card" onclick="openNewSiteForm()"><i class="ti ti-plus" style="font-size:22px"></i><span>현장 추가</span></div>';
   el.innerHTML=html;
+}
+
+function setSitePersonFilter(person){
+  sitePersonFilter=person;
+  renderGrid();
 }
 
 // ── 현장 모달 ──────────────────────────────────────────
@@ -1640,16 +1658,16 @@ function renderCalendar(){
   activeList(events).forEach(function(ev){if(!ev.date)return;var d=ev.date.slice(0,10);if(!em[d])em[d]=[];em[d].push(ev);});
   var mn=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   function isToday(y,m,d){return y===today.getFullYear()&&m===today.getMonth()+1&&d===today.getDate();}
-  var h='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)">';
+  var h='<div id="calendar-print-sheet" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)">';
   h+='<div class="cal-header"><div class="cal-nav">';
-  h+='<button class="cal-btn" onclick="changeMonth(-1)">&#8249;</button>';
+  h+='<button class="cal-btn cal-no-print" onclick="changeMonth(-1)">&#8249;</button>';
   h+='<div class="cal-title">'+calYear+'년 '+mn[calMonth-1]+'</div>';
-  h+='<button class="cal-btn" onclick="changeMonth(1)">&#8250;</button>';
-  h+='<button class="cal-today-btn" onclick="goToday()">오늘</button></div>';
+  h+='<button class="cal-btn cal-no-print" onclick="changeMonth(1)">&#8250;</button>';
+  h+='<button class="cal-today-btn cal-no-print" onclick="goToday()">오늘</button></div>';
   h+='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
   h+='<div style="display:flex;gap:10px">';
   [['#fef3c7','상량식'],['#d1fae5','미팅'],['#fce7f3','연차'],['#e5e7eb','기타']].forEach(function(x){h+='<div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text3);font-weight:500"><div style="width:8px;height:8px;border-radius:50%;background:'+x[0]+';border:1px solid rgba(0,0,0,.1)"></div>'+x[1]+'</div>';});
-  h+='</div><button class="add-btn" onclick="openAddEventForm(\'\')"><i class="ti ti-plus"></i> 이벤트 추가</button></div></div>';
+  h+='</div><div class="cal-no-print" style="display:flex;gap:6px"><button class="add-btn" id="calendar-pdf-btn" onclick="downloadCalendarPdf()"><i class="ti ti-file-type-pdf"></i> PDF 다운로드</button><button class="add-btn" onclick="openAddEventForm(\'\')"><i class="ti ti-plus"></i> 이벤트 추가</button></div></div></div>';
   h+='<table class="cal-grid-table"><thead><tr>';
   h+='<th class="cal-dow sun">일</th><th class="cal-dow">월</th><th class="cal-dow">화</th><th class="cal-dow">수</th><th class="cal-dow">목</th><th class="cal-dow">금</th><th class="cal-dow sat">토</th>';
   h+='</tr></thead><tbody>';
@@ -1679,6 +1697,14 @@ function renderCalendar(){
 }
 function changeMonth(d){calMonth+=d;if(calMonth>12){calMonth=1;calYear++;}if(calMonth<1){calMonth=12;calYear--;}renderCalendar();}
 function goToday(){var t=new Date();calYear=t.getFullYear();calMonth=t.getMonth()+1;renderCalendar();}
+function downloadCalendarPdf(){
+  var sheet=document.getElementById('calendar-print-sheet'),button=document.getElementById('calendar-pdf-btn');if(!sheet)return;
+  if(typeof html2pdf==='undefined'){showToast('PDF 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요');return;}
+  button.disabled=true;button.innerHTML='<i class="ti ti-loader-2"></i> PDF 만드는 중...';sheet.classList.add('calendar-pdf-rendering');
+  var filename=calYear+'년_'+String(calMonth).padStart(2,'0')+'월_이벤트달력.pdf';
+  var option={margin:[8,7,8,7],filename:filename,image:{type:'jpeg',quality:.97},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy'],avoid:['tr']}};
+  html2pdf().set(option).from(sheet).save().then(function(){showToast('이벤트 달력 PDF를 다운로드했어요');}).catch(function(err){console.warn(err);showToast('PDF 생성에 실패했어요');}).finally(function(){sheet.classList.remove('calendar-pdf-rendering');button.disabled=false;button.innerHTML='<i class="ti ti-file-type-pdf"></i> PDF 다운로드';});
+}
 function openAddEventForm(ds,id){
   var item=id?events.find(function(x){return x.id===id;}):null;
   document.getElementById('form-title').textContent=item?'이벤트 수정':'이벤트 추가';
@@ -2345,8 +2371,7 @@ function showTab(name,btn){
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('tab-'+name).classList.add('active');btn.classList.add('active');
-  if(name==='timeline')renderTimeline();
-  else if(name==='calendar'){goToday();}
+  if(name==='calendar'){goToday();}
   else if(name==='report')renderReport();
   else if(name==='plan')renderPlan();
   else if(name==='orders')renderOrders();
