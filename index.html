@@ -70,6 +70,7 @@ body.chat-mode .stats-row{display:none}
 .order-actions{display:flex;gap:6px;justify-content:center}.order-actions button{width:26px;height:26px;border:0;border-radius:6px;background:transparent;cursor:pointer;color:var(--text3)}.order-actions button:hover{background:var(--surface2);color:var(--text)}
 .order-pdf-rendering .order-actions{display:none}.order-pdf-rendering .order-table tr:hover td{background:#fff}
 .schedule-shell{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:14px;align-items:start}.schedule-main{min-width:0}#tab-schedule{width:min(1640px,calc(100vw - 32px));margin-left:50%;transform:translateX(-50%)}
+.schedule-view-tabs{display:flex;gap:6px;margin-bottom:12px;padding:5px;background:#e9efeb;border:1px solid #d8e1db;border-radius:10px;width:max-content}.schedule-view-tab{border:0;background:transparent;color:var(--text2);padding:8px 18px;border-radius:7px;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.schedule-view-tab:hover{background:rgba(255,255,255,.65)}.schedule-view-tab.on{background:#fff;color:var(--accent);box-shadow:0 2px 7px rgba(20,55,36,.1)}
 .schedule-main,.schedule-side{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
 .schedule-toolbar{padding:16px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .schedule-toolbar .form-input{width:auto;min-width:240px;padding:8px 12px}
@@ -93,6 +94,7 @@ body.chat-mode .stats-row{display:none}
 .schedule-gantt-months{display:flex;height:30px;border-bottom:1px solid var(--border);padding-left:170px;background:#eef3f0}.schedule-gantt-months span{flex:1;text-align:center;font-size:10px;font-weight:800;line-height:30px;border-left:1px solid #d7dfda}
 .schedule-pdf-rendering{width:1500px!important;padding:24px!important}.schedule-pdf-rendering .schedule-manage,.schedule-pdf-rendering .schedule-pdf-exclude{display:none!important}.schedule-pdf-rendering .schedule-date-input{border:0;padding:2px;background:transparent}.schedule-pdf-rendering .schedule-table-wrap{overflow:visible}.schedule-pdf-rendering .schedule-table{min-width:0;font-size:10px}.schedule-pdf-rendering .schedule-table th{padding:5px 7px}.schedule-pdf-rendering .schedule-table td{padding:5px 7px;line-height:1.35}.schedule-pdf-rendering .schedule-gantt-row{grid-template-columns:190px minmax(0,1fr)}.schedule-pdf-rendering .schedule-gantt-months{padding-left:190px}
 .schedule-pdf-chart .schedule-detail-title,.schedule-pdf-chart .schedule-table-wrap{display:none!important}.schedule-pdf-detail .schedule-print-head + .schedule-section-title,.schedule-pdf-detail .schedule-gantt{display:none!important}.schedule-pdf-detail .schedule-detail-title{margin-top:0;padding-top:8px}
+.schedule-view-chart .schedule-detail-title,.schedule-view-chart .schedule-table-wrap{display:none}.schedule-view-detail .schedule-print-head + .schedule-section-title,.schedule-view-detail .schedule-gantt{display:none}.schedule-view-detail .schedule-detail-title{margin-top:0}
 .order-link{font-size:10px;color:var(--text2);line-height:1.45}.order-link strong{color:var(--text)}.order-link.warn{color:#a64b17}.order-link.overdue{color:var(--red);font-weight:700}
 .site-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .site-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .2s;position:relative;box-shadow:var(--shadow)}
@@ -470,7 +472,6 @@ body{background:linear-gradient(180deg,#f7faf8 0,#f2f5f3 360px,#f5f7f6 100%);col
     <button class="tab-btn" data-tab="schedule" onclick="showTab('schedule',this)"><i class="ti ti-calendar-time"></i> 공사 일정</button>
     <button class="tab-btn" data-tab="calendar" onclick="showTab('calendar',this)"><i class="ti ti-calendar"></i> 이벤트</button>
     <button class="tab-btn" data-tab="plan" onclick="showTab('plan',this)"><i class="ti ti-checklist"></i> 업무 관리</button>
-    <button class="tab-btn" data-tab="orders" onclick="showTab('orders',this)"><i class="ti ti-package"></i> 발주리스트</button>
     <button class="tab-btn" data-tab="chat" onclick="showTab('chat',this)"><i class="ti ti-message-circle"></i> 채팅</button>
   </nav>
 </header>
@@ -484,7 +485,6 @@ body{background:linear-gradient(180deg,#f7faf8 0,#f2f5f3 360px,#f5f7f6 100%);col
   <div id="tab-schedule" class="panel"><div id="schedule-root"></div></div>
   <div id="tab-calendar" class="panel"><div id="calendar-root"></div></div>
   <div id="tab-plan" class="panel"><div id="plan-root"></div></div>
-  <div id="tab-orders" class="panel"><div id="orders-root"></div></div>
   <div id="tab-chat" class="panel"><div id="chat-root"></div></div>
 </main>
 <div class="ev-popup" id="ev-popup">
@@ -777,6 +777,7 @@ var baseTitle=document.title,chatUnread=false,CHAT_LAST_SEEN_KEY='smg_chat_seen_
 var pendingChatImage=null,pendingChatDraft='',chatReadSaving={},CHAT_IMAGE_MAX_CHARS=720000;
 var currentOrderSiteId='';
 var currentScheduleSiteId='';
+var currentScheduleView='chart';
 var ORDER_CATEGORIES=['기기','가전','콘센트·스위치','조명','외벽 마감','벽지','창호·도어','욕실','가구','기타'];
 var SCHEDULE_TEMPLATE=[
   {type:'공통',name:'공사 준비·착공',start:0,end:6,owner:'시공부'},
@@ -2344,10 +2345,15 @@ function scheduleGanttHtml(items){
   });
   return h+'</div>';
 }
+function scheduleViewNav(){
+  return '<div class="schedule-view-tabs">'+[['chart','일정표'],['detail','상세일정'],['orders','발주리스트']].map(function(view){return '<button class="schedule-view-tab '+(currentScheduleView===view[0]?'on':'')+'" onclick="setScheduleView(\''+view[0]+'\')">'+view[1]+'</button>';}).join('')+'</div>';
+}
+function setScheduleView(view){currentScheduleView=view;renderSchedule();}
 function renderSchedule(){
   var root=document.getElementById('schedule-root');if(!root)return;
   var active=activeList(sites),site=getScheduleSite();
   if(!site){root.innerHTML='<div class="panel-box order-empty">먼저 현장을 추가해주세요.</div>';return;}
+  if(currentScheduleView==='orders'){currentOrderSiteId=site.id;root.innerHTML=scheduleViewNav()+'<div id="schedule-orders-root"></div>';renderOrders();return;}
   var items=activeList(site.scheduleItems||[]).slice().sort(function(a,b){return String(a.startDate||'9999').localeCompare(String(b.startDate||'9999'));});
   var options=active.map(function(s){return '<option value="'+esc(s.id)+'" '+(s.id===site.id?'selected':'')+'>'+esc(s.short||s.name)+'</option>';}).join('');
   var today=new Date().toISOString().slice(0,10),done=items.filter(function(i){return i.status==='완료';}).length,activeCount=items.filter(function(i){return i.status==='진행 중';}).length;
@@ -2362,7 +2368,8 @@ function renderSchedule(){
   }).join('');
   var written=new Date(),writtenText=written.getFullYear()+'. '+String(written.getMonth()+1).padStart(2,'0')+'. '+String(written.getDate()).padStart(2,'0')+'.';
   root.innerHTML='<div class="schedule-shell"><div class="schedule-main"><div class="schedule-toolbar schedule-pdf-exclude"><select class="form-input" onchange="selectScheduleSite(this.value)">'+options+'</select><button class="btn-primary" onclick="openScheduleForm()"><i class="ti ti-plus"></i> 공정 추가</button><button class="btn-secondary" onclick="applyScheduleTemplate()"><i class="ti ti-template"></i> 기본 공정표 적용</button><button class="btn-secondary" id="schedule-pdf-btn" onclick="downloadSchedulePdf()"><i class="ti ti-file-type-pdf"></i> 일정표 PDF</button></div><div class="schedule-content" id="schedule-print-sheet"><div class="schedule-print-head"><div><div class="schedule-print-title">공사 일정표</div><div class="schedule-print-site">'+esc(site.name||site.short)+'</div></div><div class="schedule-print-meta">작성일 '+writtenText+'<br>수미가 설계부 · 시공부</div></div><div class="schedule-section-title"><span>공정표</span><span class="muted">'+items.length+'개 공정</span></div>'+scheduleGanttHtml(items)+'<div class="schedule-section-title schedule-detail-title"><span>상세 일정과 발주 준비</span><span class="muted schedule-pdf-exclude">날짜를 표에서 바로 수정하고, 상태를 누르면 완료돼요</span></div><div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>구분</th><th>공정</th><th>시작일 · 종료일</th><th>상태</th><th>담당</th><th>연결 발주</th><th>비고</th><th class="schedule-pdf-exclude">관리</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8" class="order-empty">‘기본 공정표 적용’을 누르면 표준 공정이 한 번에 만들어집니다.</td></tr>')+'</tbody></table></div></div></div><aside class="schedule-side"><h3>공정 현황</h3><div class="schedule-summary"><div class="schedule-summary-card"><b>'+items.length+'</b><span>전체 공정</span></div><div class="schedule-summary-card"><b>'+activeCount+'</b><span>진행 중</span></div><div class="schedule-summary-card"><b>'+done+'</b><span>완료</span></div><div class="schedule-summary-card"><b>'+delayed+'</b><span>지연</span></div></div>'+(riskOrders.length?'<div class="schedule-alert danger"><strong>발주 확인 필요 '+riskOrders.length+'건</strong><br>'+riskOrders.slice(0,4).map(function(i){return '· '+esc(i.name);}).join('<br>')+'</div>':'<div class="schedule-alert">공정과 연결된 발주 중 14일 이내 미발주 품목이 없습니다.</div>')+'<div class="order-guide" style="margin-top:16px">상태 버튼을 누르면 해당 공정이 바로 완료됩니다.<br><br>다른 상태로 되돌리거나 공정명·담당·비고를 바꿀 때는 ‘수정’을 이용하세요.</div></aside></div>';
-  var pdfButton=document.getElementById('schedule-pdf-btn');if(pdfButton)pdfButton.outerHTML='<button class="btn-secondary" id="schedule-chart-pdf-btn" onclick="downloadSchedulePdf(\'chart\')"><i class="ti ti-chart-bar"></i> 공정표 PDF</button><button class="btn-secondary" id="schedule-detail-pdf-btn" onclick="downloadSchedulePdf(\'detail\')"><i class="ti ti-file-description"></i> 발주준비 PDF</button>';
+  root.insertAdjacentHTML('afterbegin',scheduleViewNav());var shell=root.querySelector('.schedule-shell');if(shell)shell.classList.add('schedule-view-'+currentScheduleView);var detailTitle=root.querySelector('.schedule-detail-title span');if(detailTitle)detailTitle.textContent='상세일정';
+  var pdfButton=document.getElementById('schedule-pdf-btn');if(pdfButton)pdfButton.outerHTML=currentScheduleView==='chart'?'<button class="btn-secondary" id="schedule-chart-pdf-btn" onclick="downloadSchedulePdf(\'chart\')"><i class="ti ti-chart-bar"></i> 공정표 PDF</button>':'<button class="btn-secondary" id="schedule-detail-pdf-btn" onclick="downloadSchedulePdf(\'detail\')"><i class="ti ti-file-description"></i> 상세일정 PDF</button>';
 }
 function selectScheduleSite(id){currentScheduleSiteId=id;currentOrderSiteId=id;renderSchedule();}
 function applyScheduleTemplate(){
@@ -2405,7 +2412,7 @@ function deleteScheduleItem(id){
 function downloadSchedulePdf(mode){
   mode=mode==='detail'?'detail':'chart';var site=getScheduleSite(),sheet=document.getElementById('schedule-print-sheet'),button=document.getElementById(mode==='chart'?'schedule-chart-pdf-btn':'schedule-detail-pdf-btn');if(!site||!sheet||!button)return;
   if(typeof html2pdf==='undefined'){showToast('PDF 모듈을 불러오지 못했어요. 새로고침 후 다시 시도해주세요');return;}
-  var original=button.innerHTML,label=mode==='chart'?'공정표':'발주준비';button.disabled=true;button.innerHTML='<i class="ti ti-loader-2"></i> PDF 만드는 중...';sheet.classList.add('schedule-pdf-rendering','schedule-pdf-'+mode);
+  var original=button.innerHTML,label=mode==='chart'?'공정표':'상세일정';button.disabled=true;button.innerHTML='<i class="ti ti-loader-2"></i> PDF 만드는 중...';sheet.classList.add('schedule-pdf-rendering','schedule-pdf-'+mode);
   var filename=(site.short||site.name||'현장').replace(/[\\/:*?"<>|]/g,'_')+'_'+label+'.pdf';
   var option={margin:[8,7,9,7],filename:filename,image:{type:'jpeg',quality:.97},html2canvas:{scale:1.7,useCORS:true,backgroundColor:'#ffffff',logging:false,windowWidth:1580},jsPDF:{unit:'mm',format:'a3',orientation:'landscape'},pagebreak:{mode:['css','legacy'],avoid:['.schedule-gantt-row','tr']}};
   html2pdf().set(option).from(sheet).save().then(function(){showToast(label+' PDF를 다운로드했어요');}).catch(function(err){console.warn(err);showToast('PDF 생성에 실패했어요');}).finally(function(){sheet.classList.remove('schedule-pdf-rendering','schedule-pdf-'+mode);button.disabled=false;button.innerHTML=original;});
@@ -2429,7 +2436,7 @@ function orderCategoryList(items){
   return list.filter(function(category){return items.some(function(item){return item.category===category;});});
 }
 function renderOrders(){
-  var root=document.getElementById('orders-root');if(!root)return;
+  var root=document.getElementById('schedule-orders-root')||document.getElementById('orders-root');if(!root)return;
   var active=activeList(sites),site=getOrderSite();
   if(!site){root.innerHTML='<div class="panel-box order-empty">먼저 현장을 추가해주세요.</div>';return;}
   var items=activeList(site.orderItems||[]);
@@ -2471,7 +2478,7 @@ function renderOrderDocument(site,items){
   });
   return h;
 }
-function selectOrderSite(id){currentOrderSiteId=id;currentScheduleSiteId=id;renderOrders();}
+function selectOrderSite(id){currentOrderSiteId=id;currentScheduleSiteId=id;if(document.getElementById('schedule-orders-root'))renderSchedule();else renderOrders();}
 function openOrderForm(id){
   var site=getOrderSite();if(!site)return;
   var item=id?(site.orderItems||[]).find(function(row){return row.id===id;}):null;
@@ -2530,7 +2537,6 @@ function showTab(name,btn){
   if(name==='schedule')renderSchedule();
   else if(name==='calendar'){goToday();}
   else if(name==='plan')renderPlan();
-  else if(name==='orders')renderOrders();
   else if(name==='chat')renderChat();
 }
 function closeBg(e){if(e.target===document.getElementById('modal-bg'))closeModal();}
