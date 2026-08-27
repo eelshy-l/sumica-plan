@@ -1925,11 +1925,10 @@ function renderReport(f){
 }
 function renderPlan(f,status){
   planFilter=f===undefined?planFilter:f;planStatusFilter=status===undefined?planStatusFilter:status;
-  var workRows=activeList(plans).map(function(item){return Object.assign({_workType:'plan'},item);});
-  activeList(reports).filter(function(item){return !item.fromPlan;}).forEach(function(item){workRows.push(Object.assign({_workType:'report'},item));});
+  var workRows=activeList(plans).map(function(item){var row=Object.assign({_workType:'plan'},item);if(row.status==='확인 대기'||row.status==='보류')row.status='진행 중';else if(!row.status)row.status='예정';return row;});
+  activeList(reports).filter(function(item){return !item.fromPlan;}).forEach(function(item){var row=Object.assign({_workType:'report'},item);if(row.status==='확인 대기'||row.status==='보류')row.status='진행 중';else if(!row.status)row.status='예정';workRows.push(row);});
   var data=workRows.filter(function(item){
     if(planFilter&&item.person!==planFilter)return false;
-    if(planStatusFilter==='미지정')return !item.status;
     if(planStatusFilter&&item.status!==planStatusFilter)return false;
     return true;
   });
@@ -1938,7 +1937,7 @@ function renderPlan(f,status){
   ['','이승현','정현진','이선주'].forEach(function(p){h+='<button class="filter-btn'+(planFilter===p?' on':'')+'" onclick="renderPlan(\''+p+'\',undefined)">'+(p||'전체')+'</button>';});
   h+='<button class="add-btn" style="margin-left:auto" onclick="openTaskForm(\'plan\',null)"><i class="ti ti-plus"></i> 업무 추가</button></div>';
   h+='<div class="filter-row"><span style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.4px">진행상태</span>';
-  ['', '미지정','예정','진행 중','확인 대기','보류','완료'].forEach(function(s){h+='<button class="filter-btn'+(planStatusFilter===s?' on':'')+'" onclick="renderPlan(undefined,\''+s+'\')">'+(s||'전체')+(s?' '+(statusCounts[s]||0):' '+workRows.length)+'</button>';});h+='</div>';
+  ['','예정','진행 중','완료'].forEach(function(s){h+='<button class="filter-btn'+(planStatusFilter===s?' on':'')+'" onclick="renderPlan(undefined,\''+s+'\')">'+(s||'전체')+(s?' '+(statusCounts[s]||0):' '+workRows.length)+'</button>';});h+='</div>';
   if(!data.length)h+='<div style="text-align:center;padding:2rem;color:var(--text3);font-size:13px">선택한 조건의 업무가 없어요</div>';
   groups.forEach(function(gr,gi){
     var rows=gr.rows,open=isWeekOpen('plan',gr.info.key,gr.info.isCurrent,gi),bodyId='plan_week_'+gr.info.key.replace(/[^a-zA-Z0-9]/g,'_');
@@ -1994,8 +1993,8 @@ function syncReportFromPlan(plan){
 }
 function quickStatus(id){
   var plan=plans.find(function(x){return x.id===id;}); if(!plan)return;
-  var cycle=['','예정','진행 중','확인 대기','보류','완료'];
-  var prev=plan.status||'';
+  var cycle=['예정','진행 중','완료'];
+  var prev=plan.status||'예정';if(prev==='확인 대기'||prev==='보류')prev='진행 중';
   var next=cycle[(cycle.indexOf(prev)+1)%cycle.length];
   plan.status=next;
   plan.updatedAt=new Date().toISOString();
@@ -2005,7 +2004,8 @@ function openTaskForm(type,id){
   var isR=type==='report';var arr=isR?reports:plans;var item=id?arr.find(function(x){return x.id===id;}):null;
   document.getElementById('form-title').textContent=item?(isR?'기존 업무 수정':'업무 수정'):'업무 추가';
   var pO=PERSONS.map(function(p){return '<option value="'+p+'" '+(item&&item.person===p?'selected':'')+'>'+p+'</option>';}).join('');
-  var sO=['','예정','진행 중','확인 대기','보류','완료'].map(function(s){return '<option value="'+s+'" '+(item&&item.status===s?'selected':'')+'>'+(s||'미지정')+'</option>';}).join('');
+  var currentStatus=item&&((item.status==='확인 대기'||item.status==='보류')?'진행 중':item.status)||'예정';
+  var sO=['예정','진행 중','완료'].map(function(s){return '<option value="'+s+'" '+(currentStatus===s?'selected':'')+'>'+s+'</option>';}).join('');
   document.getElementById('form-body').innerHTML=
     '<div class=\"form-group\"><label class=\"form-label\">작업자 *</label><select class=\"form-input\" id=\"fi-person\">'+pO+'</select></div>'+
     '<div class=\"form-group\"><label class=\"form-label\">업무내용 *</label><input class=\"form-input\" id=\"fi-content\" value=\"'+(item?item.content.replace(/"/g,'&quot;'):'')+'\" placeholder=\"업무 내용\"></div>'+
