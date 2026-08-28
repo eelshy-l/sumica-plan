@@ -787,22 +787,21 @@ var SCHEDULE_TEMPLATE=[
   {type:'공통',name:'골조공사',start:35,end:62,owner:'현장소장'},
   {type:'외부공사',name:'지붕공사',start:50,end:70,owner:'시공부'},
   {type:'외부공사',name:'창호 설치',start:63,end:75,owner:'시공부'},
+  {type:'내부공사',name:'전기·설비 배관',start:65,end:90,owner:'시공부'},
   {type:'외부공사',name:'외부 방수·단열',start:70,end:85,owner:'시공부'},
   {type:'외부공사',name:'외부 마감',start:80,end:110,owner:'시공부'},
-  {type:'내부공사',name:'전기·설비 배관',start:65,end:90,owner:'시공부'},
   {type:'내부공사',name:'내부 목작업',start:80,end:115,owner:'시공부'},
-  {type:'내부공사',name:'욕실·다용도실 방수',start:105,end:115,owner:'시공부'},
   {type:'내부공사',name:'타일공사',start:112,end:130,owner:'시공부'},
-  {type:'내부공사',name:'도장·필름공사',start:125,end:140,owner:'시공부'},
-  {type:'내부공사',name:'도배공사',start:138,end:148,owner:'시공부'},
-  {type:'내부공사',name:'마루공사',start:145,end:152,owner:'시공부'},
-  {type:'내부공사',name:'가구 설치',start:148,end:165,owner:'시공부'},
-  {type:'내부공사',name:'조명·도기·수전 설치',start:158,end:170,owner:'시공부'},
   {type:'외부공사',name:'외부 토목·담장·데크',start:130,end:170,owner:'현장소장'},
+  {type:'내부공사',name:'도배공사',start:138,end:148,owner:'시공부'},
+  {type:'내부공사',name:'가구 설치',start:148,end:165,owner:'시공부'},
+  {type:'내부공사',name:'마루공사',start:145,end:152,owner:'시공부'},
+  {type:'내부공사',name:'조명·도기·수전 설치',start:158,end:170,owner:'시공부'},
   {type:'외부공사',name:'조경공사',start:165,end:178,owner:'현장소장'},
   {type:'공통',name:'청소·보수',start:175,end:183,owner:'현장소장'},
   {type:'공통',name:'준공·입주',start:184,end:190,owner:'시공부'}
 ];
+var LEGACY_SCHEDULE_TEMPLATE_NAMES=['공사 준비·착공','가설·토목공사','기초공사','골조공사','지붕공사','창호 설치','전기·설비 배관','외부 방수·단열','외부 마감','내부 목작업','욕실·다용도실 방수','타일공사','도장·필름공사','외부 토목·담장·데크','도배공사','가구 설치','마루공사','조명·도기·수전 설치','조경공사','청소·보수','준공·입주'];
 
 // ── API ────────────────────────────────────────────────
 function getLocalData(key,fallback){
@@ -2313,6 +2312,9 @@ function dayDiff(a,b){var aa=dateOnly(a),bb=dateOnly(b);return aa&&bb?Math.round
 function addScheduleDays(value,days){var d=dateOnly(value)||new Date();d.setDate(d.getDate()+days);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function scheduleStatusBadge(status){if(status==='보류')return '<span class="order-status hold">보류</span>';return statusBadge(status||'예정');}
 function scheduleTypeClass(type){return type==='외부공사'?'outside':type==='공통'?'common':'inside';}
+function sortScheduleItems(items){
+  var order={};SCHEDULE_TEMPLATE.forEach(function(item,index){order[item.name]=index;});return (items||[]).map(function(item,index){return {item:item,index:index};}).sort(function(a,b){var ai=order[a.item.name],bi=order[b.item.name],aKnown=ai!==undefined,bKnown=bi!==undefined;if(aKnown&&bKnown)return ai-bi;if(aKnown)return -1;if(bKnown)return 1;return a.index-b.index;}).map(function(entry){return entry.item;});
+}
 function scheduleOrderInfo(site,scheduleId){
   var linked=activeList(site.orderItems||[]).filter(function(item){return item.scheduleId===scheduleId;});
   var ready=linked.filter(function(item){return item.status==='발주완료'||item.status==='입고완료';}).length;
@@ -2337,7 +2339,7 @@ function scheduleGanttHtml(items){
   var start=new Date(min),end=new Date(max),months=[],cursor=new Date(start.getFullYear(),start.getMonth(),1);
   while(cursor<=end&&months.length<18){months.push((cursor.getMonth()+1)+'월');cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1);}
   var h='<div class="schedule-gantt"><div class="schedule-gantt-months">'+months.map(function(m){return '<span>'+m+'</span>';}).join('')+'</div>';
-  dated.slice().sort(function(a,b){return String(a.startDate).localeCompare(String(b.startDate));}).forEach(function(item){
+  sortScheduleItems(dated).forEach(function(item){
     var a=dateOnly(item.startDate).getTime(),b=dateOnly(item.endDate||item.startDate).getTime()+86400000;
     var left=Math.max(0,(a-min)/(max-min+86400000)*100),width=Math.max(1.5,(b-a)/(max-min+86400000)*100);
     var cls=item.status==='완료'?'done':item.status==='진행 중'?'active':item.status==='보류'?'hold':'';
@@ -2356,7 +2358,7 @@ function renderSchedule(){
   if(!site){root.innerHTML='<div class="panel-box order-empty">먼저 현장을 추가해주세요.</div>';return;}
   if(currentScheduleView==='orders'){currentOrderSiteId=site.id;root.innerHTML=scheduleViewNav()+'<div id="schedule-orders-root"></div>';renderOrders();return;}
   if(currentScheduleView==='extras'){root.innerHTML=scheduleViewNav()+'<div id="schedule-extra-root"></div>';renderExtraWorks();return;}
-  var items=activeList(site.scheduleItems||[]).slice().sort(function(a,b){return String(a.startDate||'9999').localeCompare(String(b.startDate||'9999'));});
+  var items=sortScheduleItems(activeList(site.scheduleItems||[]));
   var options=active.map(function(s){return '<option value="'+esc(s.id)+'" '+(s.id===site.id?'selected':'')+'>'+esc(s.short||s.name)+'</option>';}).join('');
   var today=new Date().toISOString().slice(0,10),done=items.filter(function(i){return i.status==='완료';}).length,activeCount=items.filter(function(i){return i.status==='진행 중';}).length;
   var delayed=items.filter(function(i){return i.status!=='완료'&&i.endDate&&i.endDate<today;}).length;
@@ -2375,10 +2377,10 @@ function renderSchedule(){
 }
 function selectScheduleSite(id){currentScheduleSiteId=id;currentOrderSiteId=id;renderSchedule();}
 function applyScheduleTemplate(){
-  var site=getScheduleSite();if(!site)return;var now=new Date().toISOString(),base=String(site.start||'').replace(/\//g,'-')||now.slice(0,10),existing={};
-  (site.scheduleItems||[]).forEach(function(item){existing[item.name]=true;});var added=0;
-  SCHEDULE_TEMPLATE.forEach(function(template){if(existing[template.name])return;site.scheduleItems.push({id:uid(),type:template.type,name:template.name,startDate:addScheduleDays(base,template.start),endDate:addScheduleDays(base,template.end),status:'예정',owner:template.owner,note:'',createdAt:now,updatedAt:now});added++;});
-  if(!added){showToast('기본 공정 항목이 이미 모두 들어가 있어요');return;}site.updatedAt=now;save('sites',sites).then(function(){renderSchedule();});showToast('기본 공정 '+added+'개를 적용했어요');
+  var site=getScheduleSite();if(!site)return;var now=new Date().toISOString(),base=String(site.start||'').replace(/\//g,'-')||now.slice(0,10),oldItems=activeList(site.scheduleItems||[]),existing={},added=0;
+  oldItems.forEach(function(item){if(existing[item.name]===undefined)existing[item.name]=item;});
+  var ordered=SCHEDULE_TEMPLATE.map(function(template){var item=existing[template.name];if(item){item.type=template.type;item.updatedAt=now;return item;}added++;return {id:uid(),type:template.type,name:template.name,startDate:addScheduleDays(base,template.start),endDate:addScheduleDays(base,template.end),status:'예정',owner:template.owner,note:'',createdAt:now,updatedAt:now};});
+  var custom=oldItems.filter(function(item){return LEGACY_SCHEDULE_TEMPLATE_NAMES.indexOf(item.name)<0;});site.scheduleItems=ordered.concat(custom);var kept={};site.scheduleItems.forEach(function(item){kept[item.id]=true;});(site.orderItems||[]).forEach(function(item){if(item.scheduleId&&!kept[item.scheduleId])item.scheduleId='';});site.updatedAt=now;save('sites',sites).then(function(){renderSchedule();renderOrders();});showToast('기본 공정 19개를 지정 순서로 적용했어요'+(added?' · 신규 '+added+'개':''));
 }
 function updateScheduleDate(id,field,value){
   var site=getScheduleSite();if(!site)return;var item=(site.scheduleItems||[]).find(function(row){return row.id===id;});if(!item)return;
@@ -2524,7 +2526,7 @@ function openOrderForm(id){
   var categories=ORDER_CATEGORIES.slice();if(categories.indexOf(category)<0)categories.push(category);
   var categoryOptions=categories.map(function(value){return '<option value="'+esc(value)+'" '+(value===category?'selected':'')+'>'+esc(value)+'</option>';}).join('');
   var statuses=['발주 전','발주완료','입고완료','보류'].map(function(value){return '<option value="'+value+'" '+(item&&item.status===value?'selected':'')+'>'+value+'</option>';}).join('');
-  var scheduleOptions='<option value="">공정 연결 안 함</option>'+activeList(site.scheduleItems||[]).slice().sort(function(a,b){return String(a.startDate||'').localeCompare(String(b.startDate||''));}).map(function(value){return '<option value="'+esc(value.id)+'" '+(item&&item.scheduleId===value.id?'selected':'')+'>'+esc(value.startDate||'날짜 미정')+' · '+esc(value.name)+'</option>';}).join('');
+  var scheduleOptions='<option value="">공정 연결 안 함</option>'+sortScheduleItems(activeList(site.scheduleItems||[])).map(function(value){return '<option value="'+esc(value.id)+'" '+(item&&item.scheduleId===value.id?'selected':'')+'>'+esc(value.startDate||'날짜 미정')+' · '+esc(value.name)+'</option>';}).join('');
   document.getElementById('form-title').textContent=item?'발주 품목 수정':'발주 품목 추가';
   document.getElementById('form-modal').style.maxWidth='760px';
   document.getElementById('form-body').innerHTML=
