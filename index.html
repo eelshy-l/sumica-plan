@@ -1071,7 +1071,6 @@ function renderTimingChecklist(s){
   h+='<div style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:10px 12px;background:var(--accent-light);border-radius:8px;border:1px solid #c6dfc9"><i class="ti ti-bulb" style="margin-right:5px;color:var(--accent)"></i>현재 공정 <strong style="color:var(--accent)">'+esc(s.stage)+'</strong> 관련 항목이 초록 테두리로 표시돼요.</div>';
   TIMING.forEach(function(block,bi){
     var isCur=block.sk.indexOf(s.stage)>=0,isPast=block.sk.every(function(sk){return STAGE_ORDER.indexOf(sk)<si;}),bKey=siteId+'_'+bi;
-    if(isCur&&openBlocks[bKey]===undefined)openBlocks[bKey]=true;
     var isOpen=openBlocks[bKey]||false,done=block.items.filter(function(_,ii){return checkState[siteId]&&checkState[siteId][bi+'_'+ii];}).length;
     h+='<div class="timing-block" style="'+(isCur?'border-color:#27ae60;border-left-width:3px':isPast?'opacity:.5':'')+'"><div class="timing-header" onclick="toggleBlock(\''+siteId+'\','+bi+')"><div><div style="font-size:13px;font-weight:600">'+esc(block.when)+'</div><div style="font-size:11px;color:var(--text3)">'+esc(block.stage)+'</div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--text3);font-weight:600" id="tp_'+siteId+'_'+bi+'">'+done+'/'+block.items.length+'</span>';
     if(isCur)h+='<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:#d1fae5;color:#065f46;font-weight:700">현재</span>';
