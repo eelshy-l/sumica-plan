@@ -95,7 +95,7 @@ body.chat-mode .stats-row{display:none}
 .schedule-gantt-months{display:flex;height:30px;border-bottom:1px solid var(--border);padding-left:170px;background:#eef3f0}.schedule-gantt-months span{flex:1;text-align:center;font-size:10px;font-weight:800;line-height:30px;border-left:1px solid #d7dfda}
 .schedule-pdf-rendering{width:1500px!important;padding:24px!important}.schedule-pdf-rendering .schedule-manage,.schedule-pdf-rendering .schedule-pdf-exclude{display:none!important}.schedule-pdf-rendering .schedule-date-input{border:0;padding:2px;background:transparent}.schedule-pdf-rendering .schedule-table-wrap{overflow:visible}.schedule-pdf-rendering .schedule-table{min-width:0;font-size:10px}.schedule-pdf-rendering .schedule-table th{padding:5px 7px}.schedule-pdf-rendering .schedule-table td{padding:5px 7px;line-height:1.35}.schedule-pdf-rendering .schedule-gantt-row{grid-template-columns:190px minmax(0,1fr)}.schedule-pdf-rendering .schedule-gantt-months{padding-left:190px}
 .schedule-pdf-chart .schedule-detail-title,.schedule-pdf-chart .schedule-table-wrap{display:none!important}.schedule-pdf-detail .schedule-print-head + .schedule-section-title,.schedule-pdf-detail .schedule-gantt{display:none!important}.schedule-pdf-detail .schedule-detail-title{margin-top:0;padding-top:8px}
-.schedule-view-chart .schedule-detail-title,.schedule-view-chart .schedule-table-wrap{display:none}.schedule-view-detail .schedule-print-head + .schedule-section-title,.schedule-view-detail .schedule-gantt{display:none}.schedule-view-detail .schedule-detail-title{margin-top:0}
+.schedule-view-chart .schedule-detail-title,.schedule-view-chart .schedule-table-wrap,.schedule-view-chart .schedule-detail-checklist{display:none}.schedule-view-detail .schedule-print-head + .schedule-section-title,.schedule-view-detail .schedule-gantt{display:none}.schedule-view-detail .schedule-detail-title{margin-top:0}.schedule-detail-checklist{margin-top:22px}.schedule-detail-checklist .sec-title{margin-top:0}
 .order-link{font-size:10px;color:var(--text2);line-height:1.45}.order-link strong{color:var(--text)}.order-link.warn{color:#a64b17}.order-link.overdue{color:var(--red);font-weight:700}
 .site-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .site-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .2s;position:relative;box-shadow:var(--shadow)}
@@ -469,8 +469,8 @@ body{background:linear-gradient(180deg,#f7faf8 0,#f2f5f3 360px,#f5f7f6 100%);col
     <div><div class="logo-text">수미가 설계부</div><div class="logo-sub">프로젝트 관리 대시보드</div></div>
   </div>
   <nav class="tabs-nav">
-    <button class="tab-btn active" data-tab="sites" onclick="showTab('sites',this)"><i class="ti ti-building"></i> 현장</button>
-    <button class="tab-btn" data-tab="schedule" onclick="showTab('schedule',this)"><i class="ti ti-calendar-time"></i> 공사 일정</button>
+    <button class="tab-btn active" data-tab="sites" onclick="showTab('sites',this)"><i class="ti ti-building"></i> 현장관리</button>
+    <button class="tab-btn" data-tab="schedule" onclick="showTab('schedule',this)"><i class="ti ti-calendar-time"></i> 시공관리</button>
     <button class="tab-btn" data-tab="calendar" onclick="showTab('calendar',this)"><i class="ti ti-calendar"></i> 이벤트</button>
     <button class="tab-btn" data-tab="plan" onclick="showTab('plan',this)"><i class="ti ti-checklist"></i> 업무 관리</button>
     <button class="tab-btn" data-tab="chat" onclick="showTab('chat',this)"><i class="ti ti-message-circle"></i> 채팅</button>
@@ -1060,6 +1060,25 @@ function setSitePersonFilter(person){
 function _btnSiteEdit(){ openSiteEditForm(window._modalSiteId); }
 function _btnDesignFee(){ openDesignFeeModal(window._modalSiteId); }
 function _btnConst(){ openConstModal(window._modalSiteId); }
+function openSiteConstruction(siteId){
+  currentScheduleSiteId=siteId;currentOrderSiteId=siteId;closeModal();var button=document.querySelector('.tab-btn[data-tab="schedule"]');showTab('schedule',button);
+}
+function renderTimingChecklist(s){
+  var siteId=s.id,si=STAGE_ORDER.indexOf(s.stage),h='';
+  h+='<div class="sec-title"><i class="ti ti-checklist"></i> 공정 타이밍 체크리스트</div>';
+  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:10px 12px;background:var(--accent-light);border-radius:8px;border:1px solid #c6dfc9"><i class="ti ti-bulb" style="margin-right:5px;color:var(--accent)"></i>현재 공정 <strong style="color:var(--accent)">'+esc(s.stage)+'</strong> 관련 항목이 초록 테두리로 표시돼요.</div>';
+  TIMING.forEach(function(block,bi){
+    var isCur=block.sk.indexOf(s.stage)>=0,isPast=block.sk.every(function(sk){return STAGE_ORDER.indexOf(sk)<si;}),bKey=siteId+'_'+bi;
+    if(isCur&&openBlocks[bKey]===undefined)openBlocks[bKey]=true;
+    var isOpen=openBlocks[bKey]||false,done=block.items.filter(function(_,ii){return checkState[siteId]&&checkState[siteId][bi+'_'+ii];}).length;
+    h+='<div class="timing-block" style="'+(isCur?'border-color:#27ae60;border-left-width:3px':isPast?'opacity:.5':'')+'"><div class="timing-header" onclick="toggleBlock(\''+siteId+'\','+bi+')"><div><div style="font-size:13px;font-weight:600">'+esc(block.when)+'</div><div style="font-size:11px;color:var(--text3)">'+esc(block.stage)+'</div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--text3);font-weight:600" id="tp_'+siteId+'_'+bi+'">'+done+'/'+block.items.length+'</span>';
+    if(isCur)h+='<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:#d1fae5;color:#065f46;font-weight:700">현재</span>';
+    h+='<i class="ti ti-chevron-down" id="tc_'+siteId+'_'+bi+'" style="font-size:15px;color:var(--text3);transition:transform .2s;'+(isOpen?'transform:rotate(180deg)':'')+'"></i></div></div><div class="timing-body'+(isOpen?' open':'')+'" id="tb_'+siteId+'_'+bi+'">';
+    block.items.forEach(function(it,ii){var chk=checkState[siteId]&&checkState[siteId][bi+'_'+ii];h+='<div class="check-item"><input type="checkbox" id="chk_'+siteId+'_'+bi+'_'+ii+'" '+(chk?'checked':'')+' onchange="toggleCheck(\''+siteId+'\','+bi+','+ii+',this.checked)"><div style="flex:1"><label class="check-label'+(chk?' done':'')+'" id="cl_'+siteId+'_'+bi+'_'+ii+'" for="chk_'+siteId+'_'+bi+'_'+ii+'">'+esc(it.t)+'</label><div class="check-reason">'+esc(it.r)+'</div></div></div>';});
+    h+='</div></div>';
+  });
+  return h;
+}
 
 function openSiteModal(siteId){
   var s=sites.find(function(x){return x.id===siteId;});
@@ -1169,38 +1188,6 @@ function openSiteModal(siteId){
   }
   h+='<div class="divider"></div>';
 
-  // 체크리스트
-  h+='<div class="sec-title"><i class="ti ti-checklist"></i> 공정 타이밍 체크리스트</div>';
-  h+='<div style="font-size:12px;color:var(--text3);margin-bottom:12px;padding:10px 12px;background:var(--accent-light);border-radius:8px;border:1px solid #c6dfc9">'+
-     '<i class="ti ti-bulb" style="margin-right:5px;color:var(--accent)"></i>현재 공정 <strong style="color:var(--accent)">'+s.stage+'</strong> 관련 항목이 초록 테두리로 표시돼요.</div>';
-  TIMING.forEach(function(block,bi){
-    var isCur=block.sk.indexOf(s.stage)>=0;
-    var isPast=block.sk.every(function(sk){return STAGE_ORDER.indexOf(sk)<si;});
-    var bKey=siteId+'_'+bi;
-    if(isCur&&openBlocks[bKey]===undefined)openBlocks[bKey]=true;
-    var isOpen=openBlocks[bKey]||false;
-    var done=block.items.filter(function(_,ii){return checkState[siteId]&&checkState[siteId][bi+'_'+ii];}).length;
-    h+='<div class="timing-block" style="'+(isCur?'border-color:#27ae60;border-left-width:3px':isPast?'opacity:.5':'')+'">';
-    h+='<div class="timing-header" onclick="toggleBlock(\''+siteId+'\','+bi+')">';
-    h+='<div><div style="font-size:13px;font-weight:600">'+block.when+'</div><div style="font-size:11px;color:var(--text3)">'+block.stage+'</div></div>';
-    h+='<div style="display:flex;align-items:center;gap:8px">'+
-       '<span style="font-size:12px;color:var(--text3);font-weight:600" id="tp_'+siteId+'_'+bi+'">'+done+'/'+block.items.length+'</span>';
-    if(isCur)h+='<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:#d1fae5;color:#065f46;font-weight:700">현재</span>';
-    h+='<i class="ti ti-chevron-down" id="tc_'+siteId+'_'+bi+'" style="font-size:15px;color:var(--text3);transition:transform .2s;'+(isOpen?'transform:rotate(180deg)':'')+'" ></i>';
-    h+='</div></div>';
-    h+='<div class="timing-body'+(isOpen?' open':'')+'" id="tb_'+siteId+'_'+bi+'">';
-    block.items.forEach(function(it,ii){
-      var chk=checkState[siteId]&&checkState[siteId][bi+'_'+ii];
-      h+='<div class="check-item">'+
-         '<input type="checkbox" id="chk_'+siteId+'_'+bi+'_'+ii+'" '+(chk?'checked':'')+' onchange="toggleCheck(\''+siteId+'\','+bi+','+ii+',this.checked)">'+
-         '<div style="flex:1">'+
-           '<label class="check-label'+(chk?' done':'')+'" id="cl_'+siteId+'_'+bi+'_'+ii+'" for="chk_'+siteId+'_'+bi+'_'+ii+'">'+it.t+'</label>'+
-           '<div class="check-reason">'+it.r+'</div>'+
-         '</div></div>';
-    });
-    h+='</div></div>';
-  });
-
   // 메모
   h+='<div class="divider"></div>';
   h+='<div class="sec-title"><i class="ti ti-notes"></i> 특이사항 / 메모</div>';
@@ -1208,6 +1195,7 @@ function openSiteModal(siteId){
   h+='<div style="display:flex;align-items:center">'+
      '<button class="memo-save" onclick="saveMemo(\''+siteId+'\')"><i class="ti ti-device-floppy"></i> 저장</button>'+
      '<span class="memo-saved" id="memo-saved-'+siteId+'">저장됐어요 ✓</span></div>';
+  h+='<div style="margin-top:20px;padding:14px;background:var(--accent-light);border:1px solid #c6dfc9;border-radius:9px;display:flex;align-items:center;justify-content:space-between;gap:12px"><div><strong style="font-size:13px">공정·발주·추가공사 관리</strong><div style="font-size:11px;color:var(--text3);margin-top:3px">상세한 시공 내용은 시공관리에서 확인하세요.</div></div><button class="btn-primary" onclick="openSiteConstruction(\''+siteId+'\')"><i class="ti ti-arrow-right"></i> 시공관리 바로가기</button></div>';
 
   document.getElementById('modal-body').innerHTML=h;
   document.getElementById('modal-bg').classList.add('open');
@@ -2370,8 +2358,8 @@ function renderSchedule(){
     var isDone=item.status==='완료';
     return '<tr><td><span class="schedule-type '+scheduleTypeClass(item.type)+'">'+esc(item.type||'내부공사')+'</span></td><td><strong style="cursor:pointer" title="눌러서 수정" onclick="openScheduleForm(\''+item.id+'\')">'+esc(item.name||'')+'</strong>'+(late?'<div style="color:var(--red);font-size:10px;font-weight:800">일정 지연</div>':'')+'</td><td><div class="schedule-dates"><input class="schedule-date-input" type="date" value="'+esc(item.startDate||'')+'" aria-label="'+esc(item.name)+' 시작일" onchange="updateScheduleDate(\''+item.id+'\',\'startDate\',this.value)"><span>~</span><input class="schedule-date-input" type="date" value="'+esc(item.endDate||item.startDate||'')+'" aria-label="'+esc(item.name)+' 종료일" onchange="updateScheduleDate(\''+item.id+'\',\'endDate\',this.value)"></div></td><td><button class="schedule-status-btn" '+(isDone?'disabled':'onclick="completeScheduleItem(\''+item.id+'\')"')+' title="'+(isDone?'완료된 공정':'눌러서 완료 처리')+'" aria-label="'+esc(item.name)+' '+(isDone?'완료':'완료 처리')+'">'+scheduleStatusBadge(item.status)+'</button></td><td>'+esc(item.owner||'—')+'</td><td><div class="schedule-order-state '+orderClass+'">'+orderText+'</div></td><td>'+esc(item.note||'')+'</td><td class="schedule-pdf-exclude"><div class="schedule-manage"><button class="small-btn small-btn-edit" onclick="openScheduleForm(\''+item.id+'\')"><i class="ti ti-pencil"></i> 수정</button><button class="small-btn small-btn-del" onclick="deleteScheduleItem(\''+item.id+'\')"><i class="ti ti-trash"></i> 삭제</button></div></td></tr>';
   }).join('');
-  var written=new Date(),writtenText=written.getFullYear()+'. '+String(written.getMonth()+1).padStart(2,'0')+'. '+String(written.getDate()).padStart(2,'0')+'.';
-  root.innerHTML='<div class="schedule-shell"><div class="schedule-main"><div class="schedule-toolbar schedule-pdf-exclude"><select class="form-input" onchange="selectScheduleSite(this.value)">'+options+'</select><button class="btn-primary" onclick="openScheduleForm()"><i class="ti ti-plus"></i> 공정 추가</button><button class="btn-secondary" onclick="applyScheduleTemplate()"><i class="ti ti-template"></i> 기본 공정표 적용</button><button class="btn-secondary" id="schedule-pdf-btn" onclick="downloadSchedulePdf()"><i class="ti ti-file-type-pdf"></i> 일정표 PDF</button></div><div class="schedule-content" id="schedule-print-sheet"><div class="schedule-print-head"><div><div class="schedule-print-title">공사 일정표</div><div class="schedule-print-site">'+esc(site.name||site.short)+'</div></div><div class="schedule-print-meta">작성일 '+writtenText+'<br>수미가 설계부 · 시공부</div></div><div class="schedule-section-title"><span>공정표</span><span class="muted">'+items.length+'개 공정</span></div>'+scheduleGanttHtml(items)+'<div class="schedule-section-title schedule-detail-title"><span>상세 일정과 발주 준비</span><span class="muted schedule-pdf-exclude">날짜를 표에서 바로 수정하고, 상태를 누르면 완료돼요</span></div><div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>구분</th><th>공정</th><th>시작일 · 종료일</th><th>상태</th><th>담당</th><th>연결 발주</th><th>비고</th><th class="schedule-pdf-exclude">관리</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8" class="order-empty">‘기본 공정표 적용’을 누르면 표준 공정이 한 번에 만들어집니다.</td></tr>')+'</tbody></table></div></div></div><aside class="schedule-side"><h3>공정 현황</h3><div class="schedule-summary"><div class="schedule-summary-card"><b>'+items.length+'</b><span>전체 공정</span></div><div class="schedule-summary-card"><b>'+activeCount+'</b><span>진행 중</span></div><div class="schedule-summary-card"><b>'+done+'</b><span>완료</span></div><div class="schedule-summary-card"><b>'+delayed+'</b><span>지연</span></div></div>'+(riskOrders.length?'<div class="schedule-alert danger"><strong>발주 확인 필요 '+riskOrders.length+'건</strong><br>'+riskOrders.slice(0,4).map(function(i){return '· '+esc(i.name);}).join('<br>')+'</div>':'<div class="schedule-alert">공정과 연결된 발주 중 14일 이내 미발주 품목이 없습니다.</div>')+'<div class="order-guide" style="margin-top:16px">상태 버튼을 누르면 해당 공정이 바로 완료됩니다.<br><br>다른 상태로 되돌리거나 공정명·담당·비고를 바꿀 때는 ‘수정’을 이용하세요.</div></aside></div>';
+  var written=new Date(),writtenText=written.getFullYear()+'. '+String(written.getMonth()+1).padStart(2,'0')+'. '+String(written.getDate()).padStart(2,'0')+'.',checklist='<div class="schedule-detail-checklist">'+renderTimingChecklist(site)+'</div>';
+  root.innerHTML='<div class="schedule-shell"><div class="schedule-main"><div class="schedule-toolbar schedule-pdf-exclude"><select class="form-input" onchange="selectScheduleSite(this.value)">'+options+'</select><button class="btn-primary" onclick="openScheduleForm()"><i class="ti ti-plus"></i> 공정 추가</button><button class="btn-secondary" onclick="applyScheduleTemplate()"><i class="ti ti-template"></i> 기본 공정표 적용</button><button class="btn-secondary" id="schedule-pdf-btn" onclick="downloadSchedulePdf()"><i class="ti ti-file-type-pdf"></i> 일정표 PDF</button></div><div class="schedule-content" id="schedule-print-sheet"><div class="schedule-print-head"><div><div class="schedule-print-title">공사 일정표</div><div class="schedule-print-site">'+esc(site.name||site.short)+'</div></div><div class="schedule-print-meta">작성일 '+writtenText+'<br>수미가 설계부 · 시공부</div></div><div class="schedule-section-title"><span>공정표</span><span class="muted">'+items.length+'개 공정</span></div>'+scheduleGanttHtml(items)+'<div class="schedule-section-title schedule-detail-title"><span>상세 일정과 발주 준비</span><span class="muted schedule-pdf-exclude">날짜를 표에서 바로 수정하고, 상태를 누르면 완료돼요</span></div><div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>구분</th><th>공정</th><th>시작일 · 종료일</th><th>상태</th><th>담당</th><th>연결 발주</th><th>비고</th><th class="schedule-pdf-exclude">관리</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8" class="order-empty">‘기본 공정표 적용’을 누르면 표준 공정이 한 번에 만들어집니다.</td></tr>')+'</tbody></table></div>'+checklist+'</div></div><aside class="schedule-side"><h3>공정 현황</h3><div class="schedule-summary"><div class="schedule-summary-card"><b>'+items.length+'</b><span>전체 공정</span></div><div class="schedule-summary-card"><b>'+activeCount+'</b><span>진행 중</span></div><div class="schedule-summary-card"><b>'+done+'</b><span>완료</span></div><div class="schedule-summary-card"><b>'+delayed+'</b><span>지연</span></div></div>'+(riskOrders.length?'<div class="schedule-alert danger"><strong>발주 확인 필요 '+riskOrders.length+'건</strong><br>'+riskOrders.slice(0,4).map(function(i){return '· '+esc(i.name);}).join('<br>')+'</div>':'<div class="schedule-alert">공정과 연결된 발주 중 14일 이내 미발주 품목이 없습니다.</div>')+'<div class="order-guide" style="margin-top:16px">상태 버튼을 누르면 해당 공정이 바로 완료됩니다.<br><br>다른 상태로 되돌리거나 공정명·담당·비고를 바꿀 때는 ‘수정’을 이용하세요.</div></aside></div>';
   root.insertAdjacentHTML('afterbegin',scheduleViewNav());var shell=root.querySelector('.schedule-shell');if(shell)shell.classList.add('schedule-view-'+currentScheduleView);var detailTitle=root.querySelector('.schedule-detail-title span');if(detailTitle)detailTitle.textContent='상세일정';
   if(currentScheduleView==='chart'){var addButton=root.querySelector('.schedule-toolbar button[onclick="openScheduleForm()"]'),templateButton=root.querySelector('.schedule-toolbar button[onclick="applyScheduleTemplate()"]');if(addButton)addButton.remove();if(templateButton)templateButton.remove();}
   var pdfButton=document.getElementById('schedule-pdf-btn');if(pdfButton)pdfButton.outerHTML=currentScheduleView==='chart'?'<button class="btn-secondary" id="schedule-chart-pdf-btn" onclick="downloadSchedulePdf(\'chart\')"><i class="ti ti-chart-bar"></i> 공정표 PDF</button>':'<button class="btn-secondary" id="schedule-detail-pdf-btn" onclick="downloadSchedulePdf(\'detail\')"><i class="ti ti-file-description"></i> 상세일정 PDF</button>';
