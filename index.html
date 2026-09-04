@@ -119,7 +119,7 @@ body.chat-mode .stats-row{display:none}
 .b-인테리어{background:#fef3c7;color:#92400e}.b-착공{background:#d1fae5;color:#065f46}
 .b-골조{background:#dbeafe;color:#1e40af}.b-인허가{background:#fce7f3;color:#831843}.b-설계{background:#ede9fe;color:#4c1d95}.b-완공{background:#dcfce7;color:#166534}
 .av{display:inline-flex;width:20px;height:20px;border-radius:50%;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;border:1.5px solid rgba(0,0,0,.08)}
-.av-이{background:#fef3c7;color:#92400e}.av-정{background:#ede9fe;color:#4c1d95}.av-선{background:#d1fae5;color:#065f46}
+.av-이{background:#fef3c7;color:#92400e}.av-정{background:#ede9fe;color:#4c1d95}.av-선{background:#d1fae5;color:#065f46}.av-기타{background:#e5e7eb;color:#374151}
 .filter-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
 .filter-btn{padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-family:inherit;font-weight:500}
 .filter-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -1156,8 +1156,8 @@ function manualSync(){
 // ── Helpers ────────────────────────────────────────────
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
 function stageBadge(s){var m={'완공':'b-완공','인테리어':'b-인테리어','착공':'b-착공','골조':'b-골조','인허가':'b-인허가','설계':'b-설계'};return '<span class="badge '+(m[s]||'b-설계')+'">'+s+'</span>';}
-function avHtml(p,sz){sz=sz||18;var k=p==='이선주'?'선':p?p[0]:'?';var cls=p==='이선주'?'av-선':(p&&p.indexOf('정')>=0?'av-정':'av-이');return '<span class="av '+cls+'" style="width:'+sz+'px;height:'+sz+'px;font-size:'+(sz*.45)+'px;margin-right:4px">'+k+'</span>'+p;}
-function avCls(p){return p==='이선주'?'av-선':(p&&p.indexOf('정')>=0?'av-정':'av-이');}
+function avHtml(p,sz){sz=sz||18;var k=p==='이선주'?'선':p?p[0]:'?';var cls=p==='이선주'?'av-선':p==='정현진'?'av-정':p==='이승현'?'av-이':'av-기타';return '<span class="av '+cls+'" style="width:'+sz+'px;height:'+sz+'px;font-size:'+(sz*.45)+'px;margin-right:4px">'+k+'</span>'+p;}
+function avCls(p){return p==='이선주'?'av-선':p==='정현진'?'av-정':p==='이승현'?'av-이':'av-기타';}
 function avKey(p){return p==='이선주'?'선':p?p[0]:'';}
 function statusBadge(s){var m={'완료':'s-완료','진행 중':'s-진행중','예정':'s-예정','확인 대기':'s-확인대기','보류':'s-보류'};return s&&m[s]?'<span class="'+m[s]+'">'+s+'</span>':'';}
 function fmtM(n){if(!n)return '—';return (n/10000).toLocaleString()+'만원';}
@@ -2390,8 +2390,9 @@ function renderChat(keepScroll){
   h+='</div></div>';
   h+='<div class="chat-form">';
   h+='<div class="chat-form-title"><i class="ti ti-edit"></i> 메시지 작성</div>';
-  h+='<div class="chat-form-sub">업무 공유나 현장 메모를 남기면 다른 기기에서도 같이 확인됩니다.</div>';
-  h+='<select class="form-input" id="chat-person" onchange="localStorage.setItem(\'smg_chat_person\',this.value);renderChat()">'+PERSONS.map(function(p){return '<option value="'+p+'" '+(person===p?'selected':'')+'>'+p+'</option>';}).join('')+'</select>';
+  h+='<div class="chat-form-sub">직원명은 목록에서 고르고, 현장소장 이름은 직접 입력할 수 있어요.</div>';
+  h+='<input class="form-input" id="chat-person" type="text" list="chat-person-options" value="'+esc(person)+'" placeholder="작성자 이름을 입력하세요" onchange="localStorage.setItem(\'smg_chat_person\',this.value.trim())" aria-label="메시지 작성자">';
+  h+='<datalist id="chat-person-options">'+PERSONS.map(function(p){return '<option value="'+esc(p)+'"></option>';}).join('')+'</datalist>';
   h+='<textarea class="form-input" id="chat-input" placeholder="메시지를 입력하세요" oninput="pendingChatDraft=this.value" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMessage()}">'+esc(pendingChatDraft)+'</textarea>';
   h+='<div class="chat-image-preview" id="chat-image-preview" style="display:'+(pendingChatImage?'block':'none')+'">'+(pendingChatImage?'<img src="'+esc(pendingChatImage.dataUrl)+'" alt="첨부 미리보기"><button class="chat-image-remove" type="button" onclick="removeChatImage()" title="이미지 제거"><i class="ti ti-x"></i></button>':'')+'</div>';
   h+='<div class="chat-compose-actions"><input type="file" id="chat-image-input" accept="image/*" style="display:none" onchange="prepareChatImage(this)"><button class="chat-attach" type="button" onclick="document.getElementById(\'chat-image-input\').click()" title="이미지 첨부"><i class="ti ti-paperclip"></i> 사진</button><button class="btn-primary chat-send" id="chat-send-btn" onclick="sendChatMessage()"><i class="ti ti-send"></i> 보내기</button></div>';
@@ -2444,7 +2445,8 @@ function sendChatMessage(){
   var personEl=document.getElementById('chat-person');
   var text=input?input.value.trim():'';
   if(!text&&!pendingChatImage){showToast('메시지나 이미지를 입력해주세요');return;}
-  var person=personEl?personEl.value:(localStorage.getItem('smg_chat_person')||PERSONS[0]);
+  var person=personEl?personEl.value.trim():(localStorage.getItem('smg_chat_person')||PERSONS[0]);
+  if(!person){showToast('작성자 이름을 입력해주세요');if(personEl)personEl.focus();return;}
   localStorage.setItem('smg_chat_person',person);
   var nowIso=new Date().toISOString();
   var message={id:uid(),person:person,text:text,createdAt:nowIso,updatedAt:nowIso,readBy:[person],likedBy:[]};
