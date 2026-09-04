@@ -481,6 +481,7 @@ body{background:linear-gradient(180deg,#f7faf8 0,#f2f5f3 360px,#f5f7f6 100%);col
   <div class="stats-row" id="stats-row"></div>
   <div id="tab-sites" class="panel active">
     <div id="timeline-root" style="margin-bottom:20px"></div>
+    <div class="filter-row" id="site-stage-index"></div>
     <div class="filter-row" id="site-person-index"></div>
     <div class="site-grid" id="site-grid"></div>
   </div>
@@ -770,6 +771,7 @@ var PERSONS=['이승현','정현진','이선주'];
 var COMPANIES=['(주)수미가','(주)수미가 종합건설'];
 
 var sites=[],reports=[],plans=[],events=[],chatMessages=[],checkState={},openBlocks={};
+var siteCompletionFilter='진행';
 var sitePersonFilter='전체';
 var isSaving=false,lastSaveTime=0;
 var _todayInit=new Date();
@@ -1028,13 +1030,22 @@ function renderStats(){
 function renderGrid(){
   var el=document.getElementById('site-grid');
   if(!el)return;
+  var activeSites=sites.filter(function(s){return s.stage!=='완공';});
+  var completedSites=sites.filter(function(s){return s.stage==='완공';});
+  var stageIndex=document.getElementById('site-stage-index');
+  if(stageIndex){
+    stageIndex.innerHTML='<span class="site-person-index-label">현장 구분</span>'+
+      '<button class="filter-btn '+(siteCompletionFilter==='진행'?'on':'')+'" onclick="setSiteCompletionFilter(\'진행\')">진행 현장 <span style="opacity:.72">'+activeSites.length+'</span></button>'+
+      '<button class="filter-btn '+(siteCompletionFilter==='완공'?'on':'')+'" onclick="setSiteCompletionFilter(\'완공\')">완공 현장 <span style="opacity:.72">'+completedSites.length+'</span></button>';
+  }
+  var grouped=siteCompletionFilter==='완공'?completedSites:activeSites;
   var index=document.getElementById('site-person-index');
   if(index){
     index.innerHTML='<span class="site-person-index-label">담당자별 보기</span>'+['전체'].concat(PERSONS).map(function(p){
-      return '<button class="filter-btn '+(sitePersonFilter===p?'on':'')+'" onclick="setSitePersonFilter(\''+p+'\')">'+p+' <span style="opacity:.72">'+(p==='전체'?sites.length:sites.filter(function(s){return s.person===p;}).length)+'</span></button>';
+      return '<button class="filter-btn '+(sitePersonFilter===p?'on':'')+'" onclick="setSitePersonFilter(\''+p+'\')">'+p+' <span style="opacity:.72">'+(p==='전체'?grouped.length:grouped.filter(function(s){return s.person===p;}).length)+'</span></button>';
     }).join('');
   }
-  var filtered=sitePersonFilter==='전체'?sites:sites.filter(function(s){return s.person===sitePersonFilter;});
+  var filtered=sitePersonFilter==='전체'?grouped:grouped.filter(function(s){return s.person===sitePersonFilter;});
   var html=filtered.map(function(s){
     var p=calcProgress(s);
     return '<div class="site-card" onclick="openSiteModal(\''+s.id+'\')">'+
@@ -1050,8 +1061,18 @@ function renderGrid(){
       '</div>'+
     '</div>';
   }).join('');
-  html+='<div class="site-add-card" onclick="openNewSiteForm()"><i class="ti ti-plus" style="font-size:22px"></i><span>현장 추가</span></div>';
+  if(siteCompletionFilter==='진행'){
+    html+='<div class="site-add-card" onclick="openNewSiteForm()"><i class="ti ti-plus" style="font-size:22px"></i><span>현장 추가</span></div>';
+  }else if(!filtered.length){
+    html+='<div style="grid-column:1/-1;text-align:center;padding:48px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text3)"><i class="ti ti-building-check" style="display:block;font-size:28px;margin-bottom:8px"></i>완공 현장이 없어요</div>';
+  }
   el.innerHTML=html;
+}
+
+function setSiteCompletionFilter(group){
+  siteCompletionFilter=group;
+  sitePersonFilter='전체';
+  renderGrid();
 }
 
 function setSitePersonFilter(person){
