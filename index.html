@@ -546,7 +546,7 @@ var FIREBASE_COLLECTION='sumigaData';
 var FIREBASE_DOC='main';
 var FIREBASE_DB=null,FIREBASE_AUTH=null,FIREBASE_READY=null,FIREBASE_AUTH_READY=null,currentUser=null,appStarted=false,CHAT_UNSUB=[],CHAT_LEGACY_UNSUB=null;
 var LEGACY_EXTRACT_API='/.netlify/functions/extract-contract'; // Netlify Functions 계약서 인식 서버
-var ACCESS_CODE_HASH='b9ef9176f8e4ea146bf0b3ee9258b274a67dd21a3cea7d22b9de41841f0c3eed'; // 현재 입장 코드: 0607
+var ACCESS_CODE_HASH='b9ef9176f8e4ea146bf0b3ee9258b274a67dd21a3cea7d22b9de41841f0c3eed';
 
 function hasFirebaseConfig(){
   return !!(FIREBASE_CONFIG&&FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.projectId&&FIREBASE_CONFIG.appId);
@@ -664,6 +664,173 @@ function remoteWrite(key,data){
     return remoteDoc(key).set({data:data,updatedAt:new Date().toISOString(),updatedBy:currentUser?currentUser.uid:''},{merge:true}).then(function(){return true;});
   });
 }
+
+// ── 분리 저장 구조 (v2) ────────────────────────────────
+// 기존 datasets/sites 같은 묶음 문서는 복구용으로 그대로 두고,
+// 실제 저장은 현장·공정·발주·추가공사·일정 항목별 문서로 나눕니다.
+var NORMALIZED_KEYS=['sites','reports','plans','events','checks'];
+var normalizedCache={};
+var normalizedMigrationCount=0;
+function isNormalizedKey(key){return NORMALIZED_KEYS.indexOf(key)>=0;}
+function normalizedIdPart(value){return encodeURIComponent(String(value||''));}
+function normalizedDocId(){return 'v2__'+Array.prototype.slice.call(arguments).map(normalizedIdPart).join('__');}
+function jsonClone(value){return JSON.parse(JSON.stringify(value));}
+function stableJson(value){
+  if(value===null||typeof value!=='object')return JSON.stringify(value);
+  if(Array.isArray(value))return '['+value.map(stableJson).join(',')+']';
+  return '{'+Object.keys(value).sort().map(function(key){return JSON.stringify(key)+':'+stableJson(value[key]);}).join(',')+'}';
+}
+function normalizedComparable(value){
+  var copy=jsonClone(value||{});
+  delete copy.savedAt;
+  delete copy.updatedBy;
+  return copy;
+}
+function ensureStableIds(key,data){
+  if(key==='sites'&&Array.isArray(data)){
+    data.forEach(function(site,siteIndex){
+      if(!site.id)site.id='site_'+siteIndex;
+      ['payment','scheduleItems','orderItems','extraItems'].forEach(function(field){
+        (Array.isArray(site[field])?site[field]:[]).forEach(function(item,itemIndex){
+          if(!item.id)item.id='legacy_'+field+'_'+itemIndex;
+        });
+      });
+      if(site.designFee&&Array.isArray(site.designFee.items)){
+        site.designFee.items.forEach(function(item,itemIndex){if(!item.id)item.id='legacy_designFeeItems_'+itemIndex;});
+      }
+    });
+  }else if(['reports','plans','events'].indexOf(key)>=0&&Array.isArray(data)){
+    data.forEach(function(item,index){if(!item.id)item.id='legacy_'+key+'_'+index;});
+  }
+  return data;
+}
+function normalizedPayloads(key,data){
+  data=ensureStableIds(key,jsonClone(data));
+  var map={};
+  function put(id,payload){map[id]=payload;}
+  if(key==='sites'){
+    (Array.isArray(data)?data:[]).forEach(function(site,siteOrder){
+      var siteId=site.id;
+      var base=jsonClone(site);
+      var designItems=base.designFee&&Array.isArray(base.designFee.items)?base.designFee.items:[];
+      delete base.payment;
+      delete base.scheduleItems;
+      delete base.orderItems;
+      delete base.extraItems;
+      if(base.designFee){base.designFee=jsonClone(base.designFee);delete base.designFee.items;}
+      put(normalizedDocId('site',siteId),{scope:key,type:'site',siteId:siteId,order:siteOrder,data:base});
+      [
+        ['payment','payment'],
+        ['schedule','scheduleItems'],
+        ['order','orderItems'],
+        ['extra','extraItems']
+      ].forEach(function(pair){
+        (Array.isArray(site[pair[1]])?site[pair[1]]:[]).forEach(function(item,itemOrder){
+          put(normalizedDocId(pair[0],siteId,item.id),{scope:key,type:'siteItem',kind:pair[0],siteId:siteId,itemId:item.id,order:itemOrder,data:item});
+        });
+      });
+      designItems.forEach(function(item,itemOrder){
+        put(normalizedDocId('designPayment',siteId,item.id),{scope:key,type:'siteItem',kind:'designPayment',siteId:siteId,itemId:item.id,order:itemOrder,data:item});
+      });
+    });
+  }else if(key==='checks'){
+    Object.keys(data||{}).forEach(function(siteId){
+      put(normalizedDocId('checks',siteId),{scope:key,type:'siteChecks',siteId:siteId,data:data[siteId]||{}});
+    });
+  }else{
+    (Array.isArray(data)?data:[]).forEach(function(item,order){
+      put(normalizedDocId(key,item.id),{scope:key,type:'record',recordId:item.id,order:order,data:item});
+    });
+  }
+  // 완료 표시는 마지막 묶음에 기록되어 중간에 이전이 멈춰도 불완전한 구조를 읽지 않습니다.
+  put(normalizedDocId('meta',key),{scope:key,type:'meta',version:2});
+  return map;
+}
+function hydrateNormalized(key,docs){
+  var cache={};
+  docs.forEach(function(entry){cache[entry.id]=normalizedComparable(entry.data);});
+  normalizedCache[key]=cache;
+  if(key==='sites'){
+    var siteMap={},siteRows=[];
+    docs.forEach(function(entry){
+      var row=entry.data||{};
+      if(row.type!=='site')return;
+      var site=jsonClone(row.data||{});
+      site.payment=[];site.scheduleItems=[];site.orderItems=[];site.extraItems=[];
+      if(site.designFee){site.designFee=jsonClone(site.designFee);site.designFee.items=[];}
+      siteMap[row.siteId]=site;
+      siteRows.push({order:row.order||0,site:site});
+    });
+    var fieldByKind={payment:'payment',schedule:'scheduleItems',order:'orderItems',extra:'extraItems'};
+    docs.filter(function(entry){return entry.data&&entry.data.type==='siteItem';}).sort(function(a,b){return (a.data.order||0)-(b.data.order||0);}).forEach(function(entry){
+      var row=entry.data,site=siteMap[row.siteId];
+      if(!site)return;
+      if(row.kind==='designPayment'){
+        if(!site.designFee)site.designFee={items:[]};
+        if(!Array.isArray(site.designFee.items))site.designFee.items=[];
+        site.designFee.items.push(jsonClone(row.data||{}));
+      }else if(fieldByKind[row.kind])site[fieldByKind[row.kind]].push(jsonClone(row.data||{}));
+    });
+    return ensureStableIds(key,siteRows.sort(function(a,b){return a.order-b.order;}).map(function(row){return row.site;}));
+  }
+  if(key==='checks'){
+    var state={};
+    docs.forEach(function(entry){var row=entry.data||{};if(row.type==='siteChecks')state[row.siteId]=jsonClone(row.data||{});});
+    return state;
+  }
+  return ensureStableIds(key,docs.filter(function(entry){return entry.data&&entry.data.type==='record';}).sort(function(a,b){return (a.data.order||0)-(b.data.order||0);}).map(function(entry){return jsonClone(entry.data.data||{});}));
+}
+function readNormalized(key){
+  return requireAuth().then(function(ok){
+    if(!ok)return null;
+    return FIREBASE_DB.collection(FIREBASE_COLLECTION).doc(FIREBASE_DOC).collection('datasets').where('scope','==',key).get().then(function(snapshot){
+      if(snapshot.empty)return null;
+      var docs=[],ready=false;snapshot.forEach(function(doc){var data=doc.data()||{};if(data.type==='meta'&&data.version===2)ready=true;docs.push({id:doc.id,data:data});});
+      if(!ready)return null;
+      return hydrateNormalized(key,docs);
+    });
+  });
+}
+function commitNormalizedOperations(operations){
+  if(!operations.length)return Promise.resolve(true);
+  var groups=[];
+  for(var i=0;i<operations.length;i+=400)groups.push(operations.slice(i,i+400));
+  return groups.reduce(function(chain,group){
+    return chain.then(function(){
+      var batch=FIREBASE_DB.batch();
+      group.forEach(function(operation){
+        var ref=remoteDoc(operation.id);
+        if(operation.remove)batch.delete(ref);
+        else batch.set(ref,Object.assign({},operation.payload,{savedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:currentUser?currentUser.uid:''}));
+      });
+      return batch.commit();
+    });
+  },Promise.resolve()).then(function(){return true;});
+}
+function writeNormalized(key,data){
+  return requireAuth().then(function(ok){
+    if(!ok)return false;
+    var desired=normalizedPayloads(key,data),current=normalizedCache[key]||{},operations=[];
+    Object.keys(desired).forEach(function(id){
+      if(!current[id]||stableJson(current[id])!==stableJson(desired[id]))operations.push({id:id,payload:desired[id]});
+    });
+    Object.keys(current).forEach(function(id){if(!desired[id])operations.push({id:id,remove:true});});
+    return commitNormalizedOperations(operations).then(function(){normalizedCache[key]=desired;return true;});
+  });
+}
+function readDataKey(key){
+  if(!isNormalizedKey(key))return remoteRead(key);
+  return readNormalized(key).then(function(value){
+    if(value!==null&&value!==undefined)return value;
+    return remoteRead(key).then(function(legacy){
+      if(legacy===null||legacy===undefined)return null;
+      ensureStableIds(key,legacy);
+      setSyncStatus('syncing','데이터 저장구조 정리 중...');
+      return writeNormalized(key,legacy).then(function(){normalizedMigrationCount++;return legacy;}).catch(function(err){console.warn('normalized migration failed',key,err);return legacy;});
+    });
+  });
+}
+function writeDataKey(key,data){return isNormalizedKey(key)?writeNormalized(key,data):remoteWrite(key,data);}
 function sheetExtract(fileName,mediaType,base64,isDesign){
   if(!LEGACY_EXTRACT_API)return Promise.reject(new Error('extract server not configured'));
   return fetch(LEGACY_EXTRACT_API+'?action=extract',{
@@ -891,10 +1058,10 @@ function initData(){
   }
   appStarted=true;
   setPageUnlocked(true);
-  sites=getLocalData('sites',DEFAULT_SITES);
-  reports=getLocalData('reports',DEFAULT_REPORTS);
-  plans=getLocalData('plans',DEFAULT_PLANS);
-  events=getLocalData('events',DEFAULT_EVENTS);
+  sites=ensureStableIds('sites',getLocalData('sites',DEFAULT_SITES));
+  reports=ensureStableIds('reports',getLocalData('reports',DEFAULT_REPORTS));
+  plans=ensureStableIds('plans',getLocalData('plans',DEFAULT_PLANS));
+  events=ensureStableIds('events',getLocalData('events',DEFAULT_EVENTS));
   chatMessages=getLocalData('chat',[]);
   checkState=getLocalData('checks',{});
   renderAll();
@@ -907,18 +1074,20 @@ function initData(){
   }
   setSyncStatus('syncing','로그인 확인 중...');
   var keys=['sites','reports','plans','events','chat','checks'];
-  var timer=new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'));},12000);});
+  var timer=new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'));},30000);});
   Promise.race([waitForAuth().then(function(user){
     if(!user){setSyncStatus('err','입장 코드 필요 · 로컬 모드');return keys.map(function(){return null;});}
     setSyncStatus('syncing','Firebase 동기화 중...');
-    return Promise.all(keys.map(function(k){return remoteRead(k);}));
+    normalizedMigrationCount=0;
+    return Promise.all(keys.map(function(k){return readDataKey(k);}));
   }),timer])
   .then(function(res){
     var migrations=res.map(function(remote,i){
       var key=keys[i];
       if((remote===null||remote===undefined)&&hasLocalData(key)){
         var local=getLocalData(key,defaultForKey(key));
-        return remoteWrite(key,local).then(function(){return local;});
+        ensureStableIds(key,local);
+        return writeDataKey(key,local).then(function(){return local;});
       }
       return Promise.resolve(remote);
     });
@@ -930,7 +1099,7 @@ function initData(){
     applyRemote('events',res[3]);
     applyRemote('chat',res[4]);
     applyRemote('checks',res[5]);
-    setSyncStatus('ok','Firebase 동기화됨 ✓');
+    setSyncStatus('ok',normalizedMigrationCount?'새 저장구조 적용됨 ✓':'Firebase 동기화됨 ✓');
     renderAll();
     updateChatNotice();
     startChatListener();
@@ -939,6 +1108,7 @@ function initData(){
 
 var saveQueues={};
 function save(key,data){
+  ensureStableIds(key,data);
   var snapshot=JSON.parse(JSON.stringify(data)); // 저장 중 원본 배열이 바뀌어도 안전하게 고정
   setLocalData(key,snapshot);
   localStorage.setItem('smg_lastSave_'+key,Date.now().toString());
@@ -951,7 +1121,7 @@ function save(key,data){
     return Promise.resolve(false);
   }
   setSyncStatus('syncing','Firebase 저장 중...');
-  saveQueues[key]=(saveQueues[key]||Promise.resolve()).then(function(){return remoteWrite(key,snapshot);})
+  saveQueues[key]=(saveQueues[key]||Promise.resolve()).then(function(){return writeDataKey(key,snapshot);})
   .then(function(ok){
     setSyncStatus(ok?'ok':'err',ok?'Firebase 저장됨 ✓':'로컬 저장됨 · Firebase 설정 필요');
     return ok;
@@ -972,8 +1142,8 @@ function manualSync(){
   }
   setSyncStatus('syncing','Firebase 동기화 중...');
   var keys=['sites','reports','plans','events','chat','checks'];
-  var timer=new Promise(function(_,rej){setTimeout(function(){rej(new Error('t'));},12000);});
-  Promise.race([Promise.all(keys.map(function(k){return remoteRead(k);})),timer])
+  var timer=new Promise(function(_,rej){setTimeout(function(){rej(new Error('t'));},20000);});
+  Promise.race([Promise.all(keys.map(function(k){return readDataKey(k);})),timer])
   .then(function(res){
     var kept=[];
     keys.forEach(function(key,i){if(!applyRemote(key,res[i])&&isRecentlySaved(key))kept.push(key);});
