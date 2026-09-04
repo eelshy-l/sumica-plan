@@ -117,7 +117,7 @@ body.chat-mode .stats-row{display:none}
 .site-add-card:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
 .b-인테리어{background:#fef3c7;color:#92400e}.b-착공{background:#d1fae5;color:#065f46}
-.b-골조{background:#dbeafe;color:#1e40af}.b-인허가{background:#fce7f3;color:#831843}.b-설계{background:#ede9fe;color:#4c1d95}
+.b-골조{background:#dbeafe;color:#1e40af}.b-인허가{background:#fce7f3;color:#831843}.b-설계{background:#ede9fe;color:#4c1d95}.b-완공{background:#dcfce7;color:#166534}
 .av{display:inline-flex;width:20px;height:20px;border-radius:50%;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0;border:1.5px solid rgba(0,0,0,.08)}
 .av-이{background:#fef3c7;color:#92400e}.av-정{background:#ede9fe;color:#4c1d95}.av-선{background:#d1fae5;color:#065f46}
 .filter-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
@@ -983,7 +983,7 @@ function manualSync(){
 
 // ── Helpers ────────────────────────────────────────────
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
-function stageBadge(s){var m={'인테리어':'b-인테리어','착공':'b-착공','골조':'b-골조','인허가':'b-인허가','설계':'b-설계'};return '<span class="badge '+(m[s]||'b-설계')+'">'+s+'</span>';}
+function stageBadge(s){var m={'완공':'b-완공','인테리어':'b-인테리어','착공':'b-착공','골조':'b-골조','인허가':'b-인허가','설계':'b-설계'};return '<span class="badge '+(m[s]||'b-설계')+'">'+s+'</span>';}
 function avHtml(p,sz){sz=sz||18;var k=p==='이선주'?'선':p?p[0]:'?';var cls=p==='이선주'?'av-선':(p&&p.indexOf('정')>=0?'av-정':'av-이');return '<span class="av '+cls+'" style="width:'+sz+'px;height:'+sz+'px;font-size:'+(sz*.45)+'px;margin-right:4px">'+k+'</span>'+p;}
 function avCls(p){return p==='이선주'?'av-선':(p&&p.indexOf('정')>=0?'av-정':'av-이');}
 function avKey(p){return p==='이선주'?'선':p?p[0]:'';}
@@ -994,10 +994,11 @@ function moneyValue(v){return parseInt(String(v||'').replace(/[^\d-]/g,''),10)||
 function moneyText(v){var n=moneyValue(v);return n?n.toLocaleString():'';}
 function moneyInput(el){el.value=moneyText(el.value);}
 function shortSite(s){if(!s)return '—';return s.replace('경상북도 ','').replace('서울시 ','').replace('대구시 ','').replace('부산시 ','').replace('경산시 ','').replace(' 개령면','').replace(' 동래구','').replace(' 성동구','').replace(' 수성구','').replace(' 북구','').replace(' 동구','');}
-function progColor(stage){return {'인테리어':'fill-green','착공':'fill-green','골조':'fill-blue','인허가':'fill-amber'}[stage]||'fill-purple';}
+function progColor(stage){return {'완공':'fill-green','인테리어':'fill-green','착공':'fill-green','골조':'fill-blue','인허가':'fill-amber'}[stage]||'fill-purple';}
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2200);}
 function calcProgress(s){
   var base={'설계':8,'인허가':22,'착공':38,'골조':55,'인테리어':75,'완공':100};
+  if(s.stage==='완공')return 100;
   var v=base[s.stage]||5;
   var livePayments=activeList(s.payment);
   if(livePayments.length){
@@ -1106,7 +1107,8 @@ function openSiteModal(siteId){
 
   // 기본 정보
   h+='<div class="sec-title"><i class="ti ti-info-circle"></i> 현장 기본 정보 '+
-     '<button onclick="_btnSiteEdit()" class="subbtn">수정</button></div>';
+     '<button onclick="_btnSiteEdit()" class="subbtn">수정</button>'+
+     (s.stage!=='완공'?'<button onclick="completeSite(\''+siteId+'\')" class="subbtn" style="color:#166534;border-color:#86efac;background:#f0fdf4"><i class="ti ti-check"></i> 완공 처리</button>':'')+'</div>';
   h+='<div class="info-grid">';
   h+='<div class="info-item"><div class="info-label">착공 예정일</div><div class="info-val">'+(s.start||'미정')+'</div></div>';
   h+='<div class="info-item"><div class="info-label">완공 예정일</div><div class="info-val">'+(s.end||'미정')+'</div></div>';
@@ -1274,6 +1276,17 @@ function saveSiteEdit(id){
   renderAll();
   openSiteModal(id);
   showToast('저장됐어요 ✓');
+}
+
+function completeSite(id){
+  var s=sites.find(function(x){return x.id===id;});
+  if(!s||s.stage==='완공')return;
+  if(!confirm((s.short||s.name)+' 현장을 완공 단계로 변경할까요?'))return;
+  s.stage='완공';
+  save('sites',sites);
+  renderAll();
+  openSiteModal(id);
+  showToast('완공 단계로 변경됐어요 ✓');
 }
 
 // ── 현장 추가 폼 ───────────────────────────────────────
@@ -1667,8 +1680,8 @@ function renderTimeline(){
   var months=[],cur=new Date(2026,1,1);
   while(cur<=ed){months.push(cur.getMonth()+1);cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);}
   var tp=Math.max(0,Math.min(100,((today-sd)/tm*100)));
-  var sc={'인테리어':'#d1fae5','착공':'#dbeafe','골조':'#ede9fe','인허가':'#fce7f3','설계':'#ede9fe'};
-  var tc={'인테리어':'#065f46','착공':'#1e40af','골조':'#4c1d95','인허가':'#831843','설계':'#4c1d95'};
+  var sc={'완공':'#dcfce7','인테리어':'#d1fae5','착공':'#dbeafe','골조':'#ede9fe','인허가':'#fce7f3','설계':'#ede9fe'};
+  var tc={'완공':'#166534','인테리어':'#065f46','착공':'#1e40af','골조':'#4c1d95','인허가':'#831843','설계':'#4c1d95'};
   var sw=sites.filter(function(s){return s.start;});
   var h='<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)">';
   h+='<div style="font-size:15px;font-weight:800;margin-bottom:14px"><i class="ti ti-chart-gantt" style="color:var(--text3);margin-right:6px"></i> 현장 스케줄 타임라인</div>';
